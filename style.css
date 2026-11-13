@@ -108,3 +108,6 @@ footer { color: var(--doux); font-size: .8rem; padding-bottom: 40px; border-top:
   .entete h1 { font-size: 1.7rem; }
   .bloc { padding: 16px; }
 }
+
+.sous-titre { margin: 14px 0 0; font-size: .85rem; color: var(--doux); font-weight: 600; }
+.sous-titre span { font-weight: 400; }

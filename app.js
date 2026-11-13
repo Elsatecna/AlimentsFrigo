@@ -61,7 +61,52 @@ function saisonDuMois(mois) { // mois 1-12
 }
 
 const NIVEAU_REGIME = { vegan: 0, vege: 1, poisson: 2, viande: 3 };
-const LIMITE_REGIME = { "vegetalien": 0, "vegetarien": 1, "pescetarien": 2, "omnivore": 3 };
+const LIMITE_REGIME = { "vegetalien": 0, "vegetarien": 1, "pescetarien": 2 };
+
+// Familles d'ingrédients utilisées par les régimes santé (repérées automatiquement dans chaque recette).
+const FAMILLES = {
+  viandeRouge: ["boeuf", "boeuf hache", "boeuf a braiser", "veau", "agneau"],
+  charcuterie: ["jambon", "jambon cru", "lardons", "saucisse de morteau", "poitrine fumee"],
+  alcool: ["vin blanc"],
+  sucres: ["sucre", "miel", "chocolat noir"],
+  feculents: ["pomme de terre", "pates", "riz", "semoule", "boulgour", "pain", "farine", "farine de sarrasin",
+    "pate brisee", "lentilles", "pois chiche", "haricot rouge", "patate douce", "mais", "petits pois"],
+  fibres: ["poireau", "carotte", "potiron", "courge butternut", "chou vert", "chou de bruxelles", "endive", "epinard",
+    "champignon", "celeri rave", "panais", "navet", "betterave cuite", "mache", "brocoli", "asperge verte", "petits pois",
+    "radis", "rhubarbe", "courgette", "aubergine", "poivron", "tomate", "concombre", "haricot vert", "lentilles",
+    "pois chiche", "haricot rouge", "patate douce", "pomme", "poire", "laitue", "oignon", "ail", "noix", "boulgour",
+    "farine de sarrasin", "artichaut", "fenouil", "chou fleur", "fraise", "cerise", "framboise", "orange", "pamplemousse", "clementine", "peche"],
+};
+
+const cacheProfil = new Map();
+function profilRecette(recette) {
+  if (cacheProfil.has(recette)) return cacheProfil.get(recette);
+  const noms = recette.ingr.map(l => canonique(nomIngredient(l)));
+  const compte = fam => noms.filter(n => FAMILLES[fam].some(f => correspond(n, normaliser(f)))).length;
+  const p = {
+    viandeRouge: compte("viandeRouge") > 0,
+    charcuterie: compte("charcuterie") > 0,
+    alcool: compte("alcool") > 0,
+    sucres: compte("sucres") > 0,
+    feculents: compte("feculents") > 0,
+    fibres: compte("fibres"),
+  };
+  p.lowCarb = !p.feculents && !p.sucres && recette.type !== "dessert";
+  cacheProfil.set(recette, p);
+  return p;
+}
+
+// Ancien format (un seul régime) → liste de régimes.
+function regimesDe(profil) {
+  if (Array.isArray(profil.regimes)) return profil.regimes;
+  return profil.regime && profil.regime !== "omnivore" ? [profil.regime] : [];
+}
+
+const REGLES_SANTE = {
+  endometriose: p => p.viandeRouge || p.charcuterie || p.alcool || p.sucres,
+  lowcarb: p => !p.lowCarb,
+  microbiote: p => p.charcuterie || p.sucres || p.fibres < 2,
+};
 
 function listeDegouts(profil) {
   return String(profil.degouts || "").split(/[,;\n]/).map(canonique).filter(Boolean);
@@ -71,7 +116,11 @@ function listeDegouts(profil) {
 function incompatibilite(recette, profil) {
   const age = Number(profil.age);
   if (profil.age !== "" && profil.age != null && age < 0.5) return null; // nourrisson : lait uniquement, pas de filtre
-  if (NIVEAU_REGIME[recette.regime] > LIMITE_REGIME[profil.regime || "omnivore"]) return "régime";
+  const regimes = regimesDe(profil);
+  const limite = Math.min(3, ...regimes.map(r => LIMITE_REGIME[r]).filter(v => v != null));
+  if (NIVEAU_REGIME[recette.regime] > limite) return "régime";
+  const pr = profilRecette(recette);
+  for (const r of regimes) if (REGLES_SANTE[r] && REGLES_SANTE[r](pr)) return r;
   const allergies = profil.allergies || [];
   for (const a of allergies) {
     if (a === "porc" && recette.porc) return "porc";
@@ -125,9 +174,10 @@ function analyser(recette, termesFrigo, avecPlacard) {
 
 function proposer({ recettes, frigo, avecPlacard, profils, saison, type }) {
   const termes = frigo.map(canonique).filter(Boolean);
-  const actifs = profils.length ? profils : [{ regime: "omnivore", allergies: [], age: "" }];
+  const actifs = profils.length ? profils : [{ regimes: [], allergies: [], age: "" }];
   const enfants = actifs.some(p => p.age !== "" && Number(p.age) < 12);
   const seniors = actifs.some(p => p.age !== "" && Number(p.age) >= 75);
+  const fibresPrioritaires = actifs.some(p => regimesDe(p).some(r => r === "microbiote" || r === "endometriose"));
   const resultats = [];
   let exclues = 0;
   for (const r of recettes) {
@@ -139,7 +189,8 @@ function proposer({ recettes, frigo, avecPlacard, profils, saison, type }) {
     const a = analyser(r, termes, avecPlacard);
     const deSaison = r.saisons.includes(saison);
     const score = a.utilises * 3 + a.couverture * 5 + (enfants && r.enfants ? 1 : 0) + (seniors && r.tendre ? 1 : 0)
-      + (r.saisons.length < 4 && deSaison ? 1 : 0);
+      + (r.saisons.length < 4 && deSaison ? 1 : 0)
+      + (fibresPrioritaires ? Math.min(profilRecette(r).fibres, 5) * 0.6 : 0);
     resultats.push({ recette: r, ...a, deSaison, score });
   }
   resultats.sort((x, y) => (y.deSaison - x.deSaison) || (y.score - x.score) || x.recette.temps - y.recette.temps);
@@ -170,7 +221,7 @@ function ajusterQuantite(qte, personnes, nom = "") {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { normaliser, canonique, correspond, incompatibilite, proposer, ajusterQuantite, saisonDuMois, conseils };
+  module.exports = { normaliser, canonique, correspond, incompatibilite, proposer, ajusterQuantite, saisonDuMois, conseils, profilRecette };
 }
 
 // ============ Interface ============
@@ -180,7 +231,7 @@ if (typeof document !== "undefined") {
   const etat = charger() || {
     frigo: [],
     placard: true,
-    profils: [{ nom: "Moi", age: "", regime: "omnivore", allergies: [], degouts: "" }],
+    profils: [{ nom: "Moi", age: "", regimes: [], allergies: [], degouts: "" }],
     saison: saisonDuMois(new Date().getMonth() + 1),
     type: "tout",
   };
@@ -217,7 +268,15 @@ if (typeof document !== "undefined") {
 
   // --- Profils ---
   const ALLERGIES = [["gluten", "Gluten"], ["lactose", "Lactose"], ["oeuf", "Œuf"], ["fruits à coque", "Fruits à coque"], ["poisson", "Poisson / fruits de mer"], ["porc", "Sans porc"]];
-  const REGIMES = [["omnivore", "Mange de tout"], ["pescetarien", "Pescétarien"], ["vegetarien", "Végétarien"], ["vegetalien", "Végétalien (vegan)"]];
+  const REGIMES = [
+    ["vegetarien", "Végétarien", "Ni viande ni poisson"],
+    ["vegetalien", "Végétalien (vegan)", "Aucun produit animal"],
+    ["pescetarien", "Pescétarien", "Pas de viande, poisson autorisé"],
+    ["endometriose", "Endométriose", "Anti-inflammatoire : sans viande rouge, charcuterie, alcool ni sucre ajouté"],
+    ["lowcarb", "Low carb", "Sans féculents (pâtes, riz, pain, pommes de terre, légumineuses) ni sucre"],
+    ["microbiote", "Microbiote", "Riche en fibres végétales, sans charcuterie ni sucre ajouté"],
+  ];
+  etat.profils.forEach(p => { p.regimes = regimesDe(p); delete p.regime; });
 
   function rendreProfils() {
     $("#profils").innerHTML = etat.profils.map((p, i) => `
@@ -225,9 +284,11 @@ if (typeof document !== "undefined") {
         <div class="ligne">
           <label>Prénom<input data-champ="nom" value="${esc(p.nom)}" placeholder="Prénom"></label>
           <label class="petit">Âge (ans)<input data-champ="age" type="number" min="0" max="120" step="any" value="${esc(p.age)}" placeholder="ex. 35"></label>
-          <label>Régime<select data-champ="regime">${REGIMES.map(([v, l]) => `<option value="${v}"${p.regime === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
           ${etat.profils.length > 1 ? `<button type="button" class="retirer" data-retirer="${i}" aria-label="Retirer ce profil">Retirer</button>` : ""}
         </div>
+        <p class="sous-titre">Régimes <span>(plusieurs choix possibles, rien coché = mange de tout)</span></p>
+        <div class="allergies">${REGIMES.map(([v, l, aide]) => `<label class="case" title="${esc(aide)}"><input type="checkbox" data-regime="${v}"${p.regimes.includes(v) ? " checked" : ""}> ${l}</label>`).join("")}</div>
+        <p class="sous-titre">Allergies et interdits</p>
         <div class="allergies">${ALLERGIES.map(([v, l]) => `<label class="case"><input type="checkbox" data-allergie="${v}"${p.allergies.includes(v) ? " checked" : ""}> ${l}</label>`).join("")}</div>
         <label class="plein">N'aime pas<input data-champ="degouts" value="${esc(p.degouts)}" placeholder="ex. champignon, poivron"></label>
       </fieldset>`).join("");
@@ -240,13 +301,17 @@ if (typeof document !== "undefined") {
       const a = e.target.dataset.allergie;
       p.allergies = e.target.checked ? [...new Set([...p.allergies, a])] : p.allergies.filter(x => x !== a);
     }
+    if (e.target.dataset.regime) {
+      const r = e.target.dataset.regime;
+      p.regimes = e.target.checked ? [...new Set([...p.regimes, r])] : p.regimes.filter(x => x !== r);
+    }
     maj();
   });
   $("#profils").addEventListener("click", e => {
     if (e.target.dataset.retirer != null) { etat.profils.splice(Number(e.target.dataset.retirer), 1); rendreProfils(); maj(); }
   });
   $("#ajout-profil").addEventListener("click", () => {
-    etat.profils.push({ nom: "", age: "", regime: "omnivore", allergies: [], degouts: "" });
+    etat.profils.push({ nom: "", age: "", regimes: [], allergies: [], degouts: "" });
     rendreProfils(); maj();
     const champs = document.querySelectorAll('.profil [data-champ="nom"]'); champs[champs.length - 1].focus();
   });
@@ -281,6 +346,8 @@ if (typeof document !== "undefined") {
       `<span class="badge">${ETIQ_REGIME[r.regime]}</span>`,
       r.allergenes.includes("gluten") ? "" : `<span class="badge">Sans gluten</span>`,
       r.allergenes.includes("lactose") ? "" : `<span class="badge">Sans lactose</span>`,
+      profilRecette(r).lowCarb ? `<span class="badge">Low carb</span>` : "",
+      profilRecette(r).fibres >= 3 ? `<span class="badge">Riche en fibres</span>` : "",
       r.epice ? `<span class="badge">Épicé</span>` : "",
     ].join("");
     const avis = conseils(r, etat.profils);
