@@ -3,22 +3,65 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Elsa</title>
-  <style>
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: sans-serif;
-      background: #fff;
-      color: #222;
-    }
-    h1 { font-size: 4rem; margin: 0; }
-  </style>
+  <title>Aliments Frigo · Recettes de saison</title>
+  <meta name="description" content="Des recettes de saison à partir de ce qu'il y a dans votre frigo, adaptées à l'âge et au régime de chaque convive.">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Elsa</h1>
+  <header class="entete">
+    <h1>Aliments Frigo</h1>
+    <p>Dites ce qu'il y a dans le frigo et qui passe à table : on vous propose des recettes de saison adaptées à tout le monde.</p>
+  </header>
+
+  <main>
+    <section class="bloc" aria-labelledby="t-frigo">
+      <h2 id="t-frigo">1. Dans mon frigo</h2>
+      <div class="saisie">
+        <input id="ajout-ingredient" type="text" placeholder="ex. poireau, carottes, oeufs… puis Entrée" autocomplete="off" aria-label="Ajouter un ingrédient">
+        <button type="button" id="bouton-ajout">Ajouter</button>
+      </div>
+      <div id="puces" class="puces" aria-live="polite"></div>
+      <div class="options-frigo">
+        <label class="case"><input type="checkbox" id="placard" checked> J'ai les basiques du placard (ail, oignon, farine, sucre, beurre, huile, moutarde, vinaigre, bouillon, épices)</label>
+        <button type="button" id="vider" class="lien">Vider le frigo</button>
+      </div>
+    </section>
+
+    <section class="bloc" aria-labelledby="t-profils">
+      <h2 id="t-profils">2. Qui mange ?</h2>
+      <div id="profils"></div>
+      <button type="button" id="ajout-profil" class="secondaire">+ Ajouter une personne</button>
+    </section>
+
+    <section class="bloc" aria-labelledby="t-options">
+      <h2 id="t-options">3. Saison et type de plat</h2>
+      <div class="ligne">
+        <label>Saison<select id="saison"></select></label>
+        <label>Type
+          <select id="type">
+            <option value="tout">Tout</option>
+            <option value="plat">Plats et soupes</option>
+            <option value="entree">Entrées et accompagnements</option>
+            <option value="dessert">Desserts</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section aria-labelledby="t-resultats" class="zone-resultats">
+      <h2 id="t-resultats">Nos propositions</h2>
+      <p id="resume" aria-live="polite"></p>
+      <div id="resultats" class="grille"></div>
+      <button type="button" id="plus" class="secondaire" hidden>Voir plus de recettes</button>
+    </section>
+  </main>
+
+  <footer>
+    <p>Allergies : vérifiez toujours les étiquettes des produits (bouillons, pâtes, sauces). Avant 6 mois, l'alimentation est uniquement lactée ; demandez conseil à votre pédiatre pour la diversification.</p>
+    <p>Fait par Elsa.</p>
+  </footer>
+
+  <script src="recettes.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

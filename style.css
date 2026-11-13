@@ -1,0 +1,110 @@
+:root {
+  --fond: #faf7f2;
+  --carte: #ffffff;
+  --texte: #2b2a27;
+  --doux: #6b675f;
+  --accent: #2f6b4f;
+  --accent-clair: #e3efe8;
+  --alerte: #a34a1f;
+  --bord: #e4ded3;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--fond);
+  color: var(--texte);
+  line-height: 1.5;
+}
+
+.entete, main, footer { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+.entete { padding-top: 40px; padding-bottom: 8px; }
+.entete h1 { margin: 0 0 6px; font-size: 2.2rem; color: var(--accent); }
+.entete p { margin: 0; color: var(--doux); max-width: 640px; }
+
+h2 { font-size: 1.15rem; margin: 0 0 14px; }
+
+.bloc {
+  background: var(--carte);
+  border: 1px solid var(--bord);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--doux); }
+label.case { flex-direction: row; align-items: center; gap: 6px; color: var(--texte); font-size: .9rem; }
+label.plein { margin-top: 10px; }
+
+input[type="text"], input[type="number"], input:not([type]), select {
+  font: inherit; font-size: 1rem; color: var(--texte);
+  padding: 9px 11px; border: 1px solid var(--bord); border-radius: 8px; background: #fff;
+}
+input:focus, select:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+button {
+  font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--accent);
+  background: var(--accent); color: #fff; padding: 9px 16px;
+}
+button.secondaire { background: #fff; color: var(--accent); }
+button.lien { background: none; border: none; color: var(--doux); text-decoration: underline; padding: 4px; }
+
+.saisie { display: flex; gap: 8px; }
+.saisie input { flex: 1; }
+
+.puces { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.puce {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--accent-clair); color: var(--accent); border-radius: 999px; padding: 4px 6px 4px 12px; font-size: .9rem;
+}
+.puce button { background: none; border: none; color: var(--accent); padding: 0 6px; font-size: 1.1rem; line-height: 1; }
+
+.options-frigo { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.ligne { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.ligne > label { flex: 1; min-width: 150px; }
+.ligne > label.petit { flex: 0 0 110px; min-width: 0; }
+
+.profil { border: 1px solid var(--bord); border-radius: 10px; padding: 14px; margin: 0 0 12px; }
+.allergies { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 12px; }
+.retirer { background: #fff; color: var(--alerte); border-color: var(--bord); }
+
+.zone-resultats { margin: 32px 0; }
+#resume { color: var(--doux); margin-top: -6px; }
+
+.grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; margin-bottom: 20px; }
+
+.recette {
+  background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.recette header { display: flex; flex-direction: column; }
+.recette h3 { margin: 0; font-size: 1.1rem; }
+.meta { color: var(--doux); font-size: .85rem; text-transform: capitalize; }
+
+.badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.badge { font-size: .75rem; padding: 2px 8px; border-radius: 999px; background: #f1ede6; color: var(--doux); }
+.badge.saison { background: var(--accent-clair); color: var(--accent); font-weight: 600; }
+.badge.hors { background: #f7e9e1; color: var(--alerte); }
+
+.dispo, .manque, .complet { margin: 0; font-size: .9rem; }
+.manque { color: var(--doux); }
+.complet { color: var(--accent); font-weight: 600; }
+
+.avis { margin: 0; padding: 8px 10px 8px 26px; background: #fff6ec; border-radius: 8px; font-size: .85rem; color: var(--alerte); }
+
+details summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: .9rem; }
+details .ingr { padding-left: 18px; font-size: .9rem; }
+details .ingr li.ok { color: var(--accent); font-weight: 600; }
+details .ingr li.base { color: var(--doux); }
+details ol { padding-left: 20px; font-size: .9rem; }
+.note { font-size: .8rem; color: var(--doux); margin: 0; }
+
+footer { color: var(--doux); font-size: .8rem; padding-bottom: 40px; border-top: 1px solid var(--bord); padding-top: 16px; }
+
+@media (max-width: 560px) {
+  .entete h1 { font-size: 1.7rem; }
+  .bloc { padding: 16px; }
+}
