@@ -172,7 +172,7 @@ function analyser(recette, termesFrigo, avecPlacard) {
   return { lignes, utilises, dispo, total: lignes.length, couverture: dispo / lignes.length };
 }
 
-function proposer({ recettes, frigo, avecPlacard, profils, saison, type }) {
+function proposer({ recettes, frigo, avecPlacard, profils, saison, type, tempsMax = 0, tri = "pertinence" }) {
   const termes = frigo.map(canonique).filter(Boolean);
   const actifs = profils.length ? profils : [{ regimes: [], allergies: [], age: "" }];
   const enfants = actifs.some(p => p.age !== "" && Number(p.age) < 12);
@@ -185,6 +185,7 @@ function proposer({ recettes, frigo, avecPlacard, profils, saison, type }) {
       const groupe = (r.type === "soupe" || r.type === "plat") ? "plat" : r.type === "dessert" ? "dessert" : "entree";
       if (groupe !== type) continue;
     }
+    if (tempsMax && r.temps > tempsMax) continue;
     if (actifs.some(p => incompatibilite(r, p))) { exclues++; continue; }
     const a = analyser(r, termes, avecPlacard);
     const deSaison = r.saisons.includes(saison);
@@ -193,7 +194,10 @@ function proposer({ recettes, frigo, avecPlacard, profils, saison, type }) {
       + (fibresPrioritaires ? Math.min(profilRecette(r).fibres, 5) * 0.6 : 0);
     resultats.push({ recette: r, ...a, deSaison, score });
   }
-  resultats.sort((x, y) => (y.deSaison - x.deSaison) || (y.score - x.score) || x.recette.temps - y.recette.temps);
+  // Les recettes de saison restent devant ; le tri choisi s'applique à l'intérieur de chaque groupe.
+  const parTemps = tri === "rapide" ? (x, y) => x.recette.temps - y.recette.temps
+    : tri === "long" ? (x, y) => y.recette.temps - x.recette.temps : () => 0;
+  resultats.sort((x, y) => (y.deSaison - x.deSaison) || parTemps(x, y) || (y.score - x.score) || x.recette.temps - y.recette.temps);
   return { resultats, exclues };
 }
 
@@ -228,31 +232,56 @@ if (typeof module !== "undefined") {
 
 if (typeof document !== "undefined") {
   const CLE = "frigo-saison-v1";
-  const etat = charger() || {
-    frigo: [],
-    placard: true,
-    profils: [{ nom: "Moi", age: "", regimes: [], allergies: [], degouts: "" }],
-    saison: saisonDuMois(new Date().getMonth() + 1),
-    type: "tout",
-  };
-  etat.saison = etat.saisonManuelle ? etat.saison : saisonDuMois(new Date().getMonth() + 1);
-  let affichees = 12;
+  const nouvelId = () => "p" + Math.random().toString(36).slice(2, 10);
 
   function charger() { try { return JSON.parse(localStorage.getItem(CLE)); } catch (e) { return null; } }
-  function sauver() { try { localStorage.setItem(CLE, JSON.stringify(etat)); } catch (e) { /* stockage indisponible */ } }
+  function sauver() {
+    const { edition, aSupprimer, ...aGarder } = etat;
+    try { localStorage.setItem(CLE, JSON.stringify(aGarder)); } catch (e) { /* stockage indisponible */ }
+  }
+
+  const etat = charger() || {
+    connus: [], frigo: [], placard: true,
+    carnet: [{ id: nouvelId(), nom: "Moi", age: "", regimes: [], allergies: [], degouts: "" }],
+    type: "tout", tempsMax: 0, tri: "pertinence",
+  };
+  // Reprise des données enregistrées par les versions précédentes du site.
+  if (etat.profils) {
+    etat.carnet = etat.profils.map(p => ({ id: nouvelId(), nom: p.nom || "", age: p.age || "", regimes: regimesDe(p), allergies: p.allergies || [], degouts: p.degouts || "" }));
+    delete etat.profils;
+  }
+  if (!etat.convives) etat.convives = etat.carnet.map(p => p.id);
+  if (!etat.connus) etat.connus = [...etat.frigo];
+  if (!etat.tri) etat.tri = "pertinence";
+  if (!etat.tempsMax) etat.tempsMax = 0;
+  etat.saison = etat.saisonManuelle ? etat.saison : saisonDuMois(new Date().getMonth() + 1);
+  etat.edition = null; etat.aSupprimer = null;
+  let affichees = 12;
 
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const convives = () => etat.carnet.filter(p => etat.convives.includes(p.id));
 
-  // --- Frigo ---
+  // --- Frigo : chaque ingrédient saisi est gardé et se coche / décoche ---
+  const estCoche = nom => etat.frigo.some(f => canonique(f) === canonique(nom));
+
   function rendreFrigo() {
-    $("#puces").innerHTML = etat.frigo.map((f, i) =>
-      `<span class="puce">${esc(f)}<button type="button" aria-label="Retirer ${esc(f)}" data-i="${i}">×</button></span>`).join("");
+    const tries = etat.connus.map((nom, i) => ({ nom, i }))
+      .sort((a, b) => normaliser(a.nom).localeCompare(normaliser(b.nom)));
+    $("#puces").innerHTML = tries.map(({ nom, i }) => {
+      const on = estCoche(nom);
+      return `<label class="puce-case${on ? " on" : ""}"><input type="checkbox" data-ing="${i}"${on ? " checked" : ""}> ${esc(nom)}<button type="button" class="oublier" data-oublier="${i}" aria-label="Retirer ${esc(nom)} de la liste" title="Retirer de la liste">×</button></label>`;
+    }).join("") || `<p class="vide">Aucun ingrédient pour l'instant. Ceux que vous ajoutez restent ici pour les prochaines fois.</p>`;
+    const n = etat.frigo.length;
+    $("#compte-frigo").textContent = etat.connus.length ? `${n} coché${n > 1 ? "s" : ""} sur ${etat.connus.length}` : "";
+    $("#actions-frigo").hidden = !etat.connus.length;
     $("#placard").checked = etat.placard;
   }
   function ajouterFrigo(texte) {
     texte.split(/[,;\n]/).map(t => t.trim()).filter(Boolean).forEach(t => {
-      if (!etat.frigo.some(f => canonique(f) === canonique(t))) etat.frigo.push(t);
+      if (!etat.connus.some(f => canonique(f) === canonique(t))) etat.connus.push(t);
+      const nom = etat.connus.find(f => canonique(f) === canonique(t));
+      if (!estCoche(nom)) etat.frigo.push(nom);
     });
     rendreFrigo(); maj();
   }
@@ -260,13 +289,25 @@ if (typeof document !== "undefined") {
     if (e.key === "Enter" || e.key === ",") { e.preventDefault(); ajouterFrigo(e.target.value); e.target.value = ""; }
   });
   $("#bouton-ajout").addEventListener("click", () => { const c = $("#ajout-ingredient"); ajouterFrigo(c.value); c.value = ""; c.focus(); });
-  $("#puces").addEventListener("click", e => {
-    if (e.target.dataset.i != null) { etat.frigo.splice(Number(e.target.dataset.i), 1); rendreFrigo(); maj(); }
+  $("#puces").addEventListener("change", e => {
+    if (e.target.dataset.ing == null) return;
+    const nom = etat.connus[Number(e.target.dataset.ing)];
+    etat.frigo = e.target.checked ? [...etat.frigo, nom] : etat.frigo.filter(f => canonique(f) !== canonique(nom));
+    rendreFrigo(); maj();
   });
-  $("#vider").addEventListener("click", () => { etat.frigo = []; rendreFrigo(); maj(); });
+  $("#puces").addEventListener("click", e => {
+    if (e.target.dataset.oublier == null) return;
+    e.preventDefault();
+    const nom = etat.connus[Number(e.target.dataset.oublier)];
+    etat.connus = etat.connus.filter(f => f !== nom);
+    etat.frigo = etat.frigo.filter(f => canonique(f) !== canonique(nom));
+    rendreFrigo(); maj();
+  });
+  $("#tout-cocher").addEventListener("click", () => { etat.frigo = [...etat.connus]; rendreFrigo(); maj(); });
+  $("#tout-decocher").addEventListener("click", () => { etat.frigo = []; rendreFrigo(); maj(); });
   $("#placard").addEventListener("change", e => { etat.placard = e.target.checked; maj(); });
 
-  // --- Profils ---
+  // --- Profils enregistrés ---
   const ALLERGIES = [["gluten", "Gluten"], ["lactose", "Lactose"], ["oeuf", "Œuf"], ["fruits à coque", "Fruits à coque"], ["poisson", "Poisson / fruits de mer"], ["porc", "Sans porc"]];
   const REGIMES = [
     ["vegetarien", "Végétarien", "Ni viande ni poisson"],
@@ -276,26 +317,54 @@ if (typeof document !== "undefined") {
     ["lowcarb", "Low carb", "Sans féculents (pâtes, riz, pain, pommes de terre, légumineuses) ni sucre"],
     ["microbiote", "Microbiote", "Riche en fibres végétales, sans charcuterie ni sucre ajouté"],
   ];
-  etat.profils.forEach(p => { p.regimes = regimesDe(p); delete p.regime; });
+  const libelle = (liste, v) => (liste.find(x => x[0] === v) || [v, v])[1];
+
+  function resumeProfil(p) {
+    const morceaux = [];
+    if (p.age !== "" && p.age != null && !isNaN(Number(p.age))) morceaux.push(formatAge(Number(p.age)));
+    morceaux.push(p.regimes.length ? p.regimes.map(r => libelle(REGIMES, r)).join(", ") : "mange de tout");
+    if (p.allergies.length) morceaux.push("sans " + p.allergies.map(a => a === "porc" ? "porc" : libelle(ALLERGIES, a).toLowerCase()).join(", "));
+    if (String(p.degouts || "").trim()) morceaux.push("n'aime pas : " + p.degouts.trim());
+    return morceaux.join(" · ");
+  }
+
+  function formulaire(p) {
+    return `<fieldset class="profil" data-id="${p.id}">
+      <div class="ligne">
+        <label>Prénom<input data-champ="nom" value="${esc(p.nom)}" placeholder="Prénom"></label>
+        <label class="petit">Âge (ans)<input data-champ="age" type="number" min="0" max="120" step="any" value="${esc(p.age)}" placeholder="ex. 35"></label>
+      </div>
+      <p class="sous-titre">Régimes <span>(plusieurs choix possibles, rien coché = mange de tout)</span></p>
+      <div class="allergies">${REGIMES.map(([v, l, aide]) => `<label class="case" title="${esc(aide)}"><input type="checkbox" data-regime="${v}"${p.regimes.includes(v) ? " checked" : ""}> ${l}</label>`).join("")}</div>
+      <p class="sous-titre">Allergies et interdits</p>
+      <div class="allergies">${ALLERGIES.map(([v, l]) => `<label class="case"><input type="checkbox" data-allergie="${v}"${p.allergies.includes(v) ? " checked" : ""}> ${l}</label>`).join("")}</div>
+      <label class="plein">N'aime pas<input data-champ="degouts" value="${esc(p.degouts)}" placeholder="ex. champignon, poivron"></label>
+      <div class="pied-profil"><button type="button" data-terminer="${p.id}">Enregistrer</button></div>
+    </fieldset>`;
+  }
 
   function rendreProfils() {
-    $("#profils").innerHTML = etat.profils.map((p, i) => `
-      <fieldset class="profil" data-i="${i}">
-        <div class="ligne">
-          <label>Prénom<input data-champ="nom" value="${esc(p.nom)}" placeholder="Prénom"></label>
-          <label class="petit">Âge (ans)<input data-champ="age" type="number" min="0" max="120" step="any" value="${esc(p.age)}" placeholder="ex. 35"></label>
-          ${etat.profils.length > 1 ? `<button type="button" class="retirer" data-retirer="${i}" aria-label="Retirer ce profil">Retirer</button>` : ""}
-        </div>
-        <p class="sous-titre">Régimes <span>(plusieurs choix possibles, rien coché = mange de tout)</span></p>
-        <div class="allergies">${REGIMES.map(([v, l, aide]) => `<label class="case" title="${esc(aide)}"><input type="checkbox" data-regime="${v}"${p.regimes.includes(v) ? " checked" : ""}> ${l}</label>`).join("")}</div>
-        <p class="sous-titre">Allergies et interdits</p>
-        <div class="allergies">${ALLERGIES.map(([v, l]) => `<label class="case"><input type="checkbox" data-allergie="${v}"${p.allergies.includes(v) ? " checked" : ""}> ${l}</label>`).join("")}</div>
-        <label class="plein">N'aime pas<input data-champ="degouts" value="${esc(p.degouts)}" placeholder="ex. champignon, poivron"></label>
-      </fieldset>`).join("");
+    $("#profils").innerHTML = etat.carnet.map(p => {
+      const on = etat.convives.includes(p.id);
+      return `<div class="profil-ligne${on ? " on" : ""}">
+        <label class="case convive"><input type="checkbox" data-convive="${p.id}"${on ? " checked" : ""}>
+          <span><strong>${esc(p.nom || "Sans nom")}</strong><span class="resume-profil" data-resume="${p.id}">${esc(resumeProfil(p))}</span></span>
+        </label>
+        <span class="actions">
+          <button type="button" class="lien" data-editer="${p.id}">${etat.edition === p.id ? "Fermer" : "Modifier"}</button>
+          ${etat.aSupprimer === p.id
+            ? `<button type="button" class="lien danger" data-confirmer="${p.id}">Confirmer la suppression</button>`
+            : `<button type="button" class="lien" data-supprimer="${p.id}">Supprimer</button>`}
+        </span>
+      </div>${etat.edition === p.id ? formulaire(p) : ""}`;
+    }).join("") || `<p class="vide">Aucun profil enregistré.</p>`;
+    const n = convives().length;
+    $("#compte-convives").textContent = `${n} personne${n > 1 ? "s" : ""} à table`;
   }
+
   $("#profils").addEventListener("input", e => {
     const f = e.target.closest(".profil"); if (!f) return;
-    const p = etat.profils[Number(f.dataset.i)];
+    const p = etat.carnet.find(x => x.id === f.dataset.id);
     if (e.target.dataset.champ) p[e.target.dataset.champ] = e.target.value;
     if (e.target.dataset.allergie) {
       const a = e.target.dataset.allergie;
@@ -305,40 +374,63 @@ if (typeof document !== "undefined") {
       const r = e.target.dataset.regime;
       p.regimes = e.target.checked ? [...new Set([...p.regimes, r])] : p.regimes.filter(x => x !== r);
     }
+    const resume = document.querySelector(`[data-resume="${p.id}"]`);
+    if (resume) resume.textContent = resumeProfil(p);
+    const titre = resume && resume.previousElementSibling; if (titre) titre.textContent = p.nom || "Sans nom";
     maj();
   });
+  $("#profils").addEventListener("change", e => {
+    const id = e.target.dataset.convive; if (!id) return;
+    etat.convives = e.target.checked ? [...etat.convives, id] : etat.convives.filter(x => x !== id);
+    rendreProfils(); maj();
+  });
   $("#profils").addEventListener("click", e => {
-    if (e.target.dataset.retirer != null) { etat.profils.splice(Number(e.target.dataset.retirer), 1); rendreProfils(); maj(); }
+    const d = e.target.dataset;
+    if (d.editer) { etat.edition = etat.edition === d.editer ? null : d.editer; etat.aSupprimer = null; rendreProfils(); }
+    else if (d.terminer) { etat.edition = null; rendreProfils(); }
+    else if (d.supprimer) { etat.aSupprimer = d.supprimer; rendreProfils(); }
+    else if (d.confirmer) {
+      etat.carnet = etat.carnet.filter(p => p.id !== d.confirmer);
+      etat.convives = etat.convives.filter(x => x !== d.confirmer);
+      if (etat.edition === d.confirmer) etat.edition = null;
+      etat.aSupprimer = null; rendreProfils(); maj();
+    }
   });
   $("#ajout-profil").addEventListener("click", () => {
-    etat.profils.push({ nom: "", age: "", regimes: [], allergies: [], degouts: "" });
+    const p = { id: nouvelId(), nom: "", age: "", regimes: [], allergies: [], degouts: "" };
+    etat.carnet.push(p); etat.convives.push(p.id); etat.edition = p.id; etat.aSupprimer = null;
     rendreProfils(); maj();
-    const champs = document.querySelectorAll('.profil [data-champ="nom"]'); champs[champs.length - 1].focus();
+    const champ = document.querySelector(`.profil[data-id="${p.id}"] [data-champ="nom"]`); if (champ) champ.focus();
   });
 
   // --- Options ---
   $("#saison").addEventListener("change", e => { etat.saison = e.target.value; etat.saisonManuelle = true; maj(); });
   $("#type").addEventListener("change", e => { etat.type = e.target.value; maj(); });
+  $("#temps-max").addEventListener("change", e => { etat.tempsMax = Number(e.target.value); maj(); });
+  $("#tri").addEventListener("change", e => { etat.tri = e.target.value; maj(); });
   $("#plus").addEventListener("click", () => { affichees += 10; rendreResultats(); });
 
   // --- Résultats ---
   const ETIQ_REGIME = { vegan: "Vegan", vege: "Végétarien", poisson: "Poisson", viande: "Viande" };
 
   function rendreResultats() {
-    const { resultats, exclues } = proposer({ recettes: RECETTES, frigo: etat.frigo, avecPlacard: etat.placard, profils: etat.profils, saison: etat.saison, type: etat.type });
-    const n = Math.max(1, etat.profils.length);
+    const table = convives();
+    const { resultats, exclues } = proposer({ recettes: RECETTES, frigo: etat.frigo, avecPlacard: etat.placard, profils: table, saison: etat.saison, type: etat.type, tempsMax: etat.tempsMax, tri: etat.tri });
+    const n = Math.max(1, table.length);
     const nbSaison = resultats.filter(r => r.deSaison).length;
     let resume = `${resultats.length} recette${resultats.length > 1 ? "s" : ""} compatible${resultats.length > 1 ? "s" : ""}, dont ${nbSaison} de saison (${NOMS_SAISONS[etat.saison].toLowerCase()}). Quantités pour ${n} personne${n > 1 ? "s" : ""}.`;
+    if (!table.length) resume += " Aucune personne cochée : les profils ne sont pas pris en compte.";
     if (exclues) resume += ` ${exclues} écartée${exclues > 1 ? "s" : ""} à cause des profils.`;
-    if (resultats.length < 10) resume += " Les contraintes sont strictes : essayez « Tout » dans le type de plat ou assouplissez un profil pour avoir au moins 10 idées.";
+    if (resultats.length < 10) resume += etat.tempsMax
+      ? " Peu de recettes dans ce temps : allongez la durée maximale pour avoir au moins 10 idées."
+      : " Les contraintes sont strictes : essayez « Tout » dans le type de plat ou assouplissez un profil pour avoir au moins 10 idées.";
     $("#resume").textContent = resume;
 
-    const liste = resultats.slice(0, affichees);
-    $("#resultats").innerHTML = liste.map(x => carte(x, n)).join("");
+    $("#resultats").innerHTML = resultats.slice(0, affichees).map(x => carte(x, n, table)).join("");
     $("#plus").hidden = resultats.length <= affichees;
   }
 
-  function carte(x, n) {
+  function carte(x, n, table) {
     const r = x.recette;
     const manquants = x.lignes.filter(l => !l.frigo && !l.base).map(l => nomIngredient(l.ligne));
     const badges = [
@@ -350,9 +442,11 @@ if (typeof document !== "undefined") {
       profilRecette(r).fibres >= 3 ? `<span class="badge">Riche en fibres</span>` : "",
       r.epice ? `<span class="badge">Épicé</span>` : "",
     ].join("");
-    const avis = conseils(r, etat.profils);
+    const avis = conseils(r, table);
+    const duree = r.temps >= 60 ? `${Math.floor(r.temps / 60)} h${r.temps % 60 ? String(r.temps % 60).padStart(2, "0") : ""}` : `${r.temps} min`;
     return `<article class="recette">
-      <header><h3>${esc(r.nom)}</h3><span class="meta">${esc(r.type)} · ${r.temps} min</span></header>
+      <header><h3>${esc(r.nom)}</h3><span class="meta">${esc(r.type)}</span></header>
+      <p class="temps"><span aria-hidden="true">⏱</span> ${duree} <span>(préparation + cuisson)</span></p>
       <div class="badges">${badges}</div>
       <p class="dispo"><strong>${x.dispo}/${x.total}</strong> ingrédients disponibles${x.utilises ? ` · utilise ${x.utilises} produit${x.utilises > 1 ? "s" : ""} de votre frigo` : ""}</p>
       ${manquants.length ? `<p class="manque">À acheter : ${manquants.map(esc).join(", ")}</p>` : `<p class="complet">Vous avez tout !</p>`}
@@ -373,5 +467,7 @@ if (typeof document !== "undefined") {
 
   $("#saison").innerHTML = SAISONS.map(s => `<option value="${s}"${s === etat.saison ? " selected" : ""}>${NOMS_SAISONS[s]}</option>`).join("");
   $("#type").value = etat.type || "tout";
-  rendreFrigo(); rendreProfils(); rendreResultats();
+  $("#temps-max").value = String(etat.tempsMax);
+  $("#tri").value = etat.tri;
+  rendreFrigo(); rendreProfils(); rendreResultats(); sauver();
 }

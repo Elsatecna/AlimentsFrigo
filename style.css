@@ -111,3 +111,36 @@ footer { color: var(--doux); font-size: .8rem; padding-bottom: 40px; border-top:
 
 .sous-titre { margin: 14px 0 0; font-size: .85rem; color: var(--doux); font-weight: 600; }
 .sous-titre span { font-weight: 400; }
+
+.aide { margin: -6px 0 12px; font-size: .85rem; color: var(--doux); }
+.vide { color: var(--doux); font-size: .9rem; margin: 4px 0; }
+.lien.danger { color: var(--alerte); font-weight: 600; }
+
+/* Ingrédients à cocher */
+.barre-frigo { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 12px; font-size: .85rem; color: var(--doux); }
+.puce-case {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  border: 1px solid var(--bord); background: #fff; color: var(--texte);
+  border-radius: 999px; padding: 4px 4px 4px 10px; font-size: .9rem;
+}
+.puce-case.on { background: var(--accent-clair); border-color: var(--accent); color: var(--accent); }
+.puce-case input { margin: 0; accent-color: var(--accent); }
+.puce-case .oublier { background: none; border: none; color: var(--doux); padding: 0 6px; font-size: 1.1rem; line-height: 1; }
+.puce-case .oublier:hover { color: var(--alerte); }
+
+/* Profils enregistrés */
+.profil-ligne {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+  border: 1px solid var(--bord); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+}
+.profil-ligne.on { border-color: var(--accent); background: #f6faf7; }
+.convive { align-items: flex-start; }
+.convive input { margin-top: 4px; accent-color: var(--accent); }
+.convive > span { display: flex; flex-direction: column; }
+.resume-profil { font-size: .82rem; color: var(--doux); }
+.actions { display: flex; gap: 4px; }
+.profil { margin-top: -4px; }
+.pied-profil { margin-top: 12px; display: flex; justify-content: flex-end; }
+
+.temps { margin: 0; font-size: .9rem; font-weight: 600; }
+.temps span:last-child { font-weight: 400; color: var(--doux); font-size: .8rem; }

@@ -15,3 +15,10 @@ Aucun serveur ni dépendance : il suffit d'ouvrir `index.html`. Les choix sont m
 ## Ajouter une recette
 
 Ajouter un objet dans `RECETTES` (fichier `recettes.js`) en suivant le format des autres recettes.
+
+## Mémorisation
+
+Tout est enregistré dans le navigateur (localStorage) :
+- le carnet de profils (on coche les personnes à table) ;
+- la liste des ingrédients déjà saisis (on coche ce qu'on a) ;
+- les réglages : saison choisie, type de plat, temps maximum, tri.
