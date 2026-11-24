@@ -372,3 +372,136 @@ body.modale-ouverte { overflow: hidden; }
 .tuile .credit { max-width: 72%; }
 @media (max-width: 520px) { .tuile { height: 350px; } .recto .photo, .recto .visuel { height: 200px; } }
 .titre-carnet { margin-top: 18px; }
+
+/* =====================================================================
+   Charte « Scandi Fresh » : blanc, sauge, bois clair, une touche de corail.
+   Police Manrope, beaucoup d'air, les photos en vedette.
+   ===================================================================== */
+:root {
+  --fond: #F7F7F4;
+  --carte: #FFFFFF;
+  --texte: #1F2421;
+  --doux: #6A706B;
+  --accent: #4F6B57;        /* sauge foncée : textes, cases cochées, boutons secondaires */
+  --accent-clair: #E6EDE4;  /* sauge très claire */
+  --sauge: #A8BBA3;
+  --bois: #E8DCC8;
+  --bois-clair: #F4EEE4;
+  --corail: #FF7F66;        /* l'unique accent vif : actions principales */
+  --corail-fonce: #E8604A;
+  --alerte: #B4442E;
+  --bord: #ECE8E1;
+  --ombre: 0 1px 2px rgba(31,36,33,.04), 0 8px 24px rgba(31,36,33,.06);
+  --rayon: 18px;
+}
+body { font-family: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--fond); color: var(--texte); letter-spacing: -.005em; -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { letter-spacing: -.02em; }
+
+/* En-tête */
+.entete { padding-top: 56px; padding-bottom: 16px; }
+.entete h1 { font-size: 3rem; font-weight: 800; color: var(--texte); line-height: 1; }
+.esperluette { color: var(--corail); }
+.entete > p { font-size: 1.05rem; color: var(--doux); max-width: 560px; }
+
+/* Blocs : blanc, sans bordure marquée, ombre douce, plus d'air */
+.bloc { border: none; border-radius: var(--rayon); box-shadow: var(--ombre); padding: 28px 30px; margin: 24px 0; }
+.bloc h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 18px; }
+.titre-champ { font-weight: 700; }
+
+/* Champs */
+input[type="text"], input[type="number"], input:not([type]), select, textarea, .form-recette textarea, .form-commentaire textarea {
+  border: 1px solid var(--bord); border-radius: 12px; background: #FCFCFA; font-family: inherit;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--sauge); outline-offset: 1px; border-color: var(--sauge); }
+
+/* Boutons : sauge pour les actions courantes, corail pour l'action principale */
+button { border-radius: 999px; background: var(--accent); border-color: var(--accent); font-weight: 600; font-family: inherit; }
+button:hover { filter: brightness(1.06); }
+button.secondaire { background: #fff; color: var(--accent); border-color: var(--sauge); }
+button.lien { background: none; border: none; color: var(--doux); }
+button.principal, .cest-parti { background: var(--corail); border-color: var(--corail); color: #1F2421; font-weight: 800; box-shadow: 0 6px 16px rgba(255,127,102,.35); }
+button.principal:hover, .cest-parti:hover { background: var(--corail-fonce); border-color: var(--corail-fonce); filter: none; }
+button:focus-visible { outline: 3px solid var(--sauge); outline-offset: 2px; }
+
+/* « Autour de » */
+.autour { background: var(--bois-clair); border: none; border-radius: 14px; padding: 16px; }
+.puce-autour { background: var(--accent); }
+
+/* Colonnes d'ingrédients */
+.colonne { background: #fff; border-color: var(--bord); border-radius: 12px; }
+.colonne h3 { color: var(--texte); }
+.ligne-ing:hover { background: var(--bois-clair); }
+.ligne-ing.on { color: var(--accent); }
+
+/* Profils */
+.profil-ligne { border-color: var(--bord); border-radius: 14px; }
+.profil-ligne.on { border-color: var(--sauge); background: #F5F8F4; }
+.profil { border-color: var(--bord); border-radius: 14px; }
+
+/* Question */
+.question { box-shadow: var(--ombre), inset 0 0 0 2px var(--sauge); border: none; }
+
+/* Résultats */
+.entete-resultats h2 { font-size: 2.2rem; font-weight: 800; color: var(--texte); }
+.grille { gap: 22px; }
+.face { border: none; border-radius: var(--rayon); box-shadow: var(--ombre); }
+.tuile:hover .face { box-shadow: 0 2px 4px rgba(31,36,33,.05), 0 14px 32px rgba(31,36,33,.10); }
+.tuile:hover .recto .photo img { transform: scale(1.04); }
+.recto .photo img { transition: transform .5s ease; }
+.retourner { color: var(--corail-fonce); }
+
+/* Code couleur des titres, version douce : rose desserts, vert entrées, jaune plats */
+.titre-recette { border-bottom: none; }
+.groupe-dessert .titre-recette { background: #F8DCD6; }
+.groupe-dessert .titre-recette h3, .groupe-dessert .titre-recette h2 { color: #8A3B2E; }
+.groupe-entree .titre-recette { background: #DCE7D8; }
+.groupe-entree .titre-recette h3, .groupe-entree .titre-recette h2 { color: #36533F; }
+.groupe-plat .titre-recette { background: #F6EACB; }
+.groupe-plat .titre-recette h3, .groupe-plat .titre-recette h2 { color: #6E5418; }
+.titre-recette h3 { font-weight: 800; }
+
+/* Étiquettes */
+.badge { background: var(--bois-clair); color: #5E574C; font-weight: 600; border-radius: 8px; }
+.badge.saison { background: var(--accent-clair); color: var(--accent); }
+.badge.hors { background: #F6E3DE; color: var(--alerte); }
+.badge.occasion { background: #FFE3DC; color: #A63A22; }
+.badge.perso { background: #E9E6F2; color: #4E4673; }
+.etoile.on, .etoiles-lecture { color: #F2A541; }
+
+/* Illustrations (recettes sans photo) dans les tons de la charte */
+.visuel { background: linear-gradient(135deg, #F4EEE4, #E8DCC8); }
+.visuel-soupe, .visuel-plat { background: linear-gradient(135deg, #FBF4E2, #F0E1BC); }
+.visuel-entree, .visuel-accompagnement { background: linear-gradient(135deg, #EEF3EC, #D3E0CF); }
+.visuel-dessert { background: linear-gradient(135deg, #FCEDEA, #F4D3CC); }
+
+/* Appel à contribution, carnet */
+.appel { background: var(--bois-clair); border: none; border-radius: 14px; }
+.appel a, a { color: var(--accent); }
+.form-recette { border: none; background: #FBFAF7; box-shadow: inset 0 0 0 2px var(--accent-clair); border-radius: 16px; }
+.liste-recettes li { border-top-color: var(--bord); }
+
+/* Grande vue */
+.modale-fond { background: rgba(31, 36, 33, .45); backdrop-filter: blur(3px); }
+.modale-boite { border-radius: 22px; }
+.bandeau-cuisinier { background: #FBEAE6; color: #8A2E1C; border-left-color: var(--alerte); border-radius: 10px; }
+.etape-adulte { color: #C0262D; }
+.commentaires li { background: var(--bois-clair); border-radius: 12px; }
+.avis { background: #FFF4EC; color: #8A3B2E; border-radius: 12px; }
+
+/* Curseur Timing */
+.curseur input[type="range"] { accent-color: var(--corail); }
+.curseur strong { color: var(--corail-fonce); }
+
+footer { border-top-color: var(--bord); }
+
+@media (max-width: 640px) {
+  .entete { padding-top: 28px; }
+  .entete h1 { font-size: 2.2rem; }
+  .bloc { padding: 20px 16px; border-radius: 16px; }
+  .entete-resultats h2 { font-size: 1.8rem; }
+}
+/* Photos : sur les tuiles elles remplissent le cadre ; en grand, elles gardent leur taille sur un fond flouté */
+.photo .photo-fond { display: none; }
+.grande .photo { background: var(--bois-clair); }
+.grande .photo .photo-fond { display: block; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(24px) saturate(1.1); transform: scale(1.15); opacity: .75; }
+.grande .photo .photo-plat { position: relative; width: auto; max-width: 100%; height: 100%; margin: 0 auto; object-fit: contain; }

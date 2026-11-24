@@ -864,7 +864,7 @@ if (typeof document !== "undefined") {
     if (photo) {
       const credit = photo.auteur
         ? `<a class="credit" href="${esc(photo.page)}" target="_blank" rel="noopener">Photo : ${esc(photo.auteur)} · ${esc(photo.licence)}</a>` : "";
-      return `<figure class="photo"><img src="${esc(photo.src)}" alt="${esc(r.nom)}" loading="lazy">${credit}</figure>`;
+      return `<figure class="photo"><img class="photo-fond" src="${esc(photo.src)}" alt="" aria-hidden="true" loading="lazy"><img class="photo-plat" src="${esc(photo.src)}" alt="${esc(r.nom)}" loading="lazy">${credit}</figure>`;
     }
     const vus = new Set(), icones = [];
     const principaux = r.ingr.map(nomIngredient).filter(n => !BASIQUES.has(canonique(n)));
