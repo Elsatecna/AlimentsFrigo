@@ -172,7 +172,7 @@ function analyser(recette, termesFrigo, avecPlacard) {
   return { lignes, utilises, dispo, total: lignes.length, couverture: dispo / lignes.length };
 }
 
-function proposer({ recettes, frigo, avecPlacard, profils, saison, type, tempsMax = 0, tri = "pertinence" }) {
+function proposer({ recettes, frigo, avecPlacard, profils, saison, type, tempsMax = 0, tri = "pertinence", complet = false }) {
   const termes = frigo.map(canonique).filter(Boolean);
   const actifs = profils.length ? profils : [{ regimes: [], allergies: [], age: "" }];
   const enfants = actifs.some(p => p.age !== "" && Number(p.age) < 12);
@@ -188,6 +188,7 @@ function proposer({ recettes, frigo, avecPlacard, profils, saison, type, tempsMa
     if (tempsMax && r.temps > tempsMax) continue;
     if (actifs.some(p => incompatibilite(r, p))) { exclues++; continue; }
     const a = analyser(r, termes, avecPlacard);
+    if (complet && a.dispo < a.total) continue;
     const deSaison = r.saisons.includes(saison);
     const score = a.utilises * 3 + a.couverture * 5 + (enfants && r.enfants ? 1 : 0) + (seniors && r.tendre ? 1 : 0)
       + (r.saisons.length < 4 && deSaison ? 1 : 0)
@@ -199,6 +200,49 @@ function proposer({ recettes, frigo, avecPlacard, profils, saison, type, tempsMa
     : tri === "long" ? (x, y) => y.recette.temps - x.recette.temps : () => 0;
   resultats.sort((x, y) => (y.deSaison - x.deSaison) || parTemps(x, y) || (y.score - x.score) || x.recette.temps - y.recette.temps);
   return { resultats, exclues };
+}
+
+// Range un ingrédient dans un rayon : correspondance exacte d'abord, puis la plus longue, puis un mot du nom.
+const cacheClasse = new Map();
+function classer(nom) {
+  const c = canonique(nom);
+  if (cacheClasse.has(c)) return cacheClasse.get(c);
+  const tous = [];
+  for (const cat of (typeof CATEGORIES !== "undefined" ? CATEGORIES : [])) {
+    for (const [cle, emoji] of Object.entries(cat.items)) tous.push({ cat, emoji, cle: normaliser(cle) });
+  }
+  const mots = c.split(" ");
+  const trouve = tous.find(t => t.cle === c)
+    || tous.filter(t => correspond(c, t.cle)).sort((a, b) => b.cle.length - a.cle.length)[0]
+    || tous.find(t => !t.cle.includes(" ") && mots.includes(t.cle));
+  const res = trouve ? { categorie: trouve.cat.id, emoji: trouve.emoji } : { categorie: "autres", emoji: "🧺" };
+  cacheClasse.set(c, res);
+  return res;
+}
+
+// Ingrédients qui manquent pour les recettes les plus proches, classés par nombre de recettes qu'ils débloquent.
+function ingredientsManquants(options, limite = 40) {
+  const { resultats } = proposer({ ...options, tri: "pertinence", complet: false });
+  let maxManquants = 2, candidats = [];
+  while (maxManquants <= 6) {
+    candidats = resultats.filter(x => x.total > x.dispo && x.total - x.dispo <= maxManquants);
+    if (candidats.length >= 20) break;
+    maxManquants++;
+  }
+  const parNom = new Map();
+  for (const x of candidats) {
+    for (const l of x.lignes) {
+      if (l.frigo || l.base) continue;
+      const nom = nomIngredient(l.ligne), cle = canonique(nom);
+      if (!parNom.has(cle)) parNom.set(cle, { nom, recettes: [], deSaison: 0 });
+      const e = parNom.get(cle);
+      e.recettes.push(x.recette.nom);
+      if (x.deSaison) e.deSaison++;
+    }
+  }
+  return [...parNom.values()]
+    .sort((a, b) => (b.deSaison - a.deSaison) || (b.recettes.length - a.recettes.length) || a.nom.localeCompare(b.nom))
+    .slice(0, limite);
 }
 
 function ajusterQuantite(qte, personnes, nom = "") {
@@ -225,7 +269,7 @@ function ajusterQuantite(qte, personnes, nom = "") {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { normaliser, canonique, correspond, incompatibilite, proposer, ajusterQuantite, saisonDuMois, conseils, profilRecette };
+  module.exports = { normaliser, canonique, correspond, incompatibilite, proposer, ajusterQuantite, saisonDuMois, conseils, profilRecette, classer, ingredientsManquants };
 }
 
 // ============ Interface ============
@@ -265,13 +309,24 @@ if (typeof document !== "undefined") {
   // --- Frigo : chaque ingrédient saisi est gardé et se coche / décoche ---
   const estCoche = nom => etat.frigo.some(f => canonique(f) === canonique(nom));
 
+  // Regroupe des noms par rayon, dans l'ordre des rayons, chaque colonne triée par ordre alphabétique.
+  function parRayon(elements, nomDe) {
+    const rayons = [...CATEGORIES, AUTRES].map(c => ({ ...c, elements: [] }));
+    for (const el of elements) rayons.find(r => r.id === classer(nomDe(el)).categorie).elements.push(el);
+    rayons.forEach(r => r.elements.sort((a, b) => normaliser(nomDe(a)).localeCompare(normaliser(nomDe(b)))));
+    return rayons.filter(r => r.elements.length);
+  }
+
   function rendreFrigo() {
-    const tries = etat.connus.map((nom, i) => ({ nom, i }))
-      .sort((a, b) => normaliser(a.nom).localeCompare(normaliser(b.nom)));
-    $("#puces").innerHTML = tries.map(({ nom, i }) => {
-      const on = estCoche(nom);
-      return `<label class="puce-case${on ? " on" : ""}"><input type="checkbox" data-ing="${i}"${on ? " checked" : ""}> ${esc(nom)}<button type="button" class="oublier" data-oublier="${i}" aria-label="Retirer ${esc(nom)} de la liste" title="Retirer de la liste">×</button></label>`;
-    }).join("") || `<p class="vide">Aucun ingrédient pour l'instant. Ceux que vous ajoutez restent ici pour les prochaines fois.</p>`;
+    const rayons = parRayon(etat.connus.map((nom, i) => ({ nom, i })), x => x.nom);
+    $("#puces").innerHTML = rayons.map(r => `
+      <div class="colonne">
+        <h3><span aria-hidden="true">${r.icone}</span> ${esc(r.nom)}</h3>
+        ${r.elements.map(({ nom, i }) => {
+          const on = estCoche(nom);
+          return `<label class="ligne-ing${on ? " on" : ""}"><input type="checkbox" data-ing="${i}"${on ? " checked" : ""}> <span>${esc(nom)}</span><button type="button" class="oublier" data-oublier="${i}" aria-label="Retirer ${esc(nom)} de la liste" title="Retirer de la liste">×</button></label>`;
+        }).join("")}
+      </div>`).join("") || `<p class="vide">Aucun ingrédient pour l'instant. Ceux que vous ajoutez restent ici, rangés par rayon, pour les prochaines fois.</p>`;
     const n = etat.frigo.length;
     $("#compte-frigo").textContent = etat.connus.length ? `${n} coché${n > 1 ? "s" : ""} sur ${etat.connus.length}` : "";
     $("#actions-frigo").hidden = !etat.connus.length;
@@ -410,20 +465,71 @@ if (typeof document !== "undefined") {
   $("#tri").addEventListener("change", e => { etat.tri = e.target.value; maj(); });
   $("#plus").addEventListener("click", () => { affichees += 10; rendreResultats(); });
 
-  // --- Résultats ---
+  // --- Étape « Avez-vous aussi… ? » ---
+  const optionsRecherche = () => ({ recettes: RECETTES, frigo: etat.frigo, avecPlacard: etat.placard, profils: convives(), saison: etat.saison, type: etat.type, tempsMax: etat.tempsMax, tri: etat.tri });
+  if (!etat.etape) etat.etape = "saisie";
+  if (!etat.question) etat.question = [];
+
+  function rendreEtapes() {
+    $("#question").hidden = etat.etape === "saisie" || !etat.question.length;
+    $("#zone-resultats").hidden = etat.etape !== "resultats";
+    $("#chercher").textContent = etat.etape === "saisie" ? "Trouver des recettes" : "Relancer la recherche";
+    $("#valider-question").hidden = etat.etape === "resultats";
+    rendreQuestion();
+  }
+
+  function rendreQuestion() {
+    if (!etat.question.length) { $("#question-liste").innerHTML = ""; return; }
+    $("#question-intro").textContent = etat.etape === "resultats"
+      ? "Cochez ou décochez : les recettes ci-dessous se mettent à jour."
+      : "Ces ingrédients manquent pour des recettes qui vous correspondent. Cochez ceux que vous avez : seules les recettes dont vous avez tous les ingrédients seront proposées.";
+    const rayons = parRayon(etat.question, q => q.nom);
+    $("#question-liste").innerHTML = rayons.map(r => `
+      <div class="colonne">
+        <h3><span aria-hidden="true">${r.icone}</span> ${esc(r.nom)}</h3>
+        ${r.elements.map(q => {
+          const on = estCoche(q.nom);
+          const n = q.recettes.length;
+          return `<label class="ligne-ing${on ? " on" : ""}" title="${esc("Pour : " + q.recettes.join(", "))}"><input type="checkbox" data-question="${esc(q.nom)}"${on ? " checked" : ""}> <span>${esc(q.nom)} <small>${n} recette${n > 1 ? "s" : ""}</small></span></label>`;
+        }).join("")}
+      </div>`).join("");
+  }
+
+  $("#chercher").addEventListener("click", () => {
+    etat.question = ingredientsManquants(optionsRecherche()).map(q => ({ nom: q.nom, recettes: q.recettes }));
+    etat.etape = etat.question.length ? "question" : "resultats";
+    sauver(); rendreEtapes(); rendreResultats();
+    (etat.etape === "question" ? $("#question") : $("#zone-resultats")).scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  $("#question-liste").addEventListener("change", e => {
+    const nom = e.target.dataset.question; if (!nom) return;
+    if (e.target.checked) {
+      if (!etat.connus.some(f => canonique(f) === canonique(nom))) etat.connus.push(nom);
+      if (!estCoche(nom)) etat.frigo.push(etat.connus.find(f => canonique(f) === canonique(nom)));
+    } else {
+      etat.frigo = etat.frigo.filter(f => canonique(f) !== canonique(nom));
+    }
+    rendreFrigo(); rendreQuestion(); maj();
+  });
+  $("#valider-question").addEventListener("click", () => {
+    etat.etape = "resultats"; sauver(); rendreEtapes(); rendreResultats();
+    $("#zone-resultats").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  // --- Résultats : uniquement les recettes dont on a tous les ingrédients ---
   const ETIQ_REGIME = { vegan: "Vegan", vege: "Végétarien", poisson: "Poisson", viande: "Viande" };
 
   function rendreResultats() {
+    if (etat.etape !== "resultats") return;
     const table = convives();
-    const { resultats, exclues } = proposer({ recettes: RECETTES, frigo: etat.frigo, avecPlacard: etat.placard, profils: table, saison: etat.saison, type: etat.type, tempsMax: etat.tempsMax, tri: etat.tri });
+    const { resultats } = proposer({ ...optionsRecherche(), profils: table, complet: true });
     const n = Math.max(1, table.length);
     const nbSaison = resultats.filter(r => r.deSaison).length;
-    let resume = `${resultats.length} recette${resultats.length > 1 ? "s" : ""} compatible${resultats.length > 1 ? "s" : ""}, dont ${nbSaison} de saison (${NOMS_SAISONS[etat.saison].toLowerCase()}). Quantités pour ${n} personne${n > 1 ? "s" : ""}.`;
+    let resume = resultats.length
+      ? `${resultats.length} recette${resultats.length > 1 ? "s" : ""} réalisable${resultats.length > 1 ? "s" : ""} avec ce que vous avez, dont ${nbSaison} de saison (${NOMS_SAISONS[etat.saison].toLowerCase()}). Quantités pour ${n} personne${n > 1 ? "s" : ""}.`
+      : "Aucune recette n'est réalisable avec tous les ingrédients cochés pour l'instant. Cochez les ingrédients que vous avez dans la liste ci-dessus, ou ajoutez-en au frigo.";
     if (!table.length) resume += " Aucune personne cochée : les profils ne sont pas pris en compte.";
-    if (exclues) resume += ` ${exclues} écartée${exclues > 1 ? "s" : ""} à cause des profils.`;
-    if (resultats.length < 10) resume += etat.tempsMax
-      ? " Peu de recettes dans ce temps : allongez la durée maximale pour avoir au moins 10 idées."
-      : " Les contraintes sont strictes : essayez « Tout » dans le type de plat ou assouplissez un profil pour avoir au moins 10 idées.";
+    if (resultats.length && resultats.length < 10) resume += " Pour plus d'idées, cochez d'autres ingrédients" + (etat.tempsMax ? " ou allongez le temps maximum." : ".");
     $("#resume").textContent = resume;
 
     $("#resultats").innerHTML = resultats.slice(0, affichees).map(x => carte(x, n, table)).join("");
@@ -432,7 +538,6 @@ if (typeof document !== "undefined") {
 
   function carte(x, n, table) {
     const r = x.recette;
-    const manquants = x.lignes.filter(l => !l.frigo && !l.base).map(l => nomIngredient(l.ligne));
     const badges = [
       x.deSaison ? `<span class="badge saison">De saison</span>` : `<span class="badge hors">Hors saison</span>`,
       `<span class="badge">${ETIQ_REGIME[r.regime]}</span>`,
@@ -445,18 +550,35 @@ if (typeof document !== "undefined") {
     const avis = conseils(r, table);
     const duree = r.temps >= 60 ? `${Math.floor(r.temps / 60)} h${r.temps % 60 ? String(r.temps % 60).padStart(2, "0") : ""}` : `${r.temps} min`;
     return `<article class="recette">
+      ${visuel(r)}
+      <div class="corps">
       <header><h3>${esc(r.nom)}</h3><span class="meta">${esc(r.type)}</span></header>
       <p class="temps"><span aria-hidden="true">⏱</span> ${duree} <span>(préparation + cuisson)</span></p>
       <div class="badges">${badges}</div>
-      <p class="dispo"><strong>${x.dispo}/${x.total}</strong> ingrédients disponibles${x.utilises ? ` · utilise ${x.utilises} produit${x.utilises > 1 ? "s" : ""} de votre frigo` : ""}</p>
-      ${manquants.length ? `<p class="manque">À acheter : ${manquants.map(esc).join(", ")}</p>` : `<p class="complet">Vous avez tout !</p>`}
+      <p class="complet">Vous avez tous les ingrédients${x.utilises ? ` · utilise ${x.utilises} produit${x.utilises > 1 ? "s" : ""} de votre frigo` : ""}</p>
       ${avis.length ? `<ul class="avis">${avis.map(a => `<li>${esc(a)}</li>`).join("")}</ul>` : ""}
       <details><summary>Voir la recette</summary>
         <ul class="ingr">${x.lignes.map(l => `<li class="${l.frigo ? "ok" : l.base ? "base" : ""}">${esc(nomIngredient(l.ligne))}${qteIngredient(l.ligne) ? ` — ${esc(ajusterQuantite(qteIngredient(l.ligne), n, nomIngredient(l.ligne)))}` : ""}</li>`).join("")}</ul>
         <p class="note">+ sel, poivre, huile et eau.</p>
         <ol>${r.etapes.map(e => `<li>${esc(e)}</li>`).join("")}</ol>
       </details>
+      </div>
     </article>`;
+  }
+
+  // Visuel illustré : couleur selon le type de plat, pictogrammes des ingrédients principaux.
+  const BASIQUES = new Set(["ail", "oignon", "echalote", "bouillon de legume", "huile", "vinaigre", "moutarde", "sucre", "farine", "beurre", "curry", "cumin", "cannelle", "thym", "vanille"]);
+  function visuel(r) {
+    const vus = new Set(), icones = [];
+    const principaux = r.ingr.map(nomIngredient).filter(n => !BASIQUES.has(canonique(n)));
+    const ajouter = noms => { for (const nom of noms) { const e = classer(nom).emoji; if (!vus.has(e) && icones.length < 4) { vus.add(e); icones.push(e); } } };
+    ajouter(principaux);
+    if (icones.length < 2) ajouter(r.ingr.map(nomIngredient));
+    const cle = normaliser(r.type).replace(/ /g, "-");
+    return `<div class="visuel visuel-${cle}" role="img" aria-label="Illustration : ${esc(r.nom)}">
+      <span class="visuel-type" aria-hidden="true">${ICONES_TYPE[r.type] || "🍽️"}</span>
+      <span class="visuel-ingr" aria-hidden="true">${icones.join("")}</span>
+    </div>`;
   }
 
   let minuteur;
@@ -469,5 +591,5 @@ if (typeof document !== "undefined") {
   $("#type").value = etat.type || "tout";
   $("#temps-max").value = String(etat.tempsMax);
   $("#tri").value = etat.tri;
-  rendreFrigo(); rendreProfils(); rendreResultats(); sauver();
+  rendreFrigo(); rendreProfils(); rendreEtapes(); rendreResultats(); sauver();
 }

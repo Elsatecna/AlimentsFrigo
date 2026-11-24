@@ -144,3 +144,38 @@ footer { color: var(--doux); font-size: .8rem; padding-bottom: 40px; border-top:
 
 .temps { margin: 0; font-size: .9rem; font-weight: 600; }
 .temps span:last-child { font-weight: 400; color: var(--doux); font-size: .8rem; }
+
+/* Rayons en colonnes */
+.colonnes { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin: 12px 0; }
+.colonne { border: 1px solid var(--bord); border-radius: 10px; padding: 10px 10px 6px; background: #fdfcfa; }
+.colonne h3 { margin: 0 0 6px; font-size: .9rem; display: flex; gap: 6px; align-items: center; }
+.ligne-ing { display: flex; align-items: center; gap: 8px; padding: 4px 4px; border-radius: 6px; cursor: pointer; color: var(--texte); font-size: .92rem; }
+.ligne-ing:hover { background: #f3efe8; }
+.ligne-ing.on { color: var(--accent); font-weight: 600; }
+.ligne-ing input { margin: 0; accent-color: var(--accent); flex: none; }
+.ligne-ing > span { flex: 1; }
+.ligne-ing small { display: block; font-weight: 400; color: var(--doux); font-size: .75rem; }
+.ligne-ing .oublier { background: none; border: none; color: var(--doux); padding: 0 4px; font-size: 1rem; line-height: 1; opacity: .5; }
+.ligne-ing:hover .oublier { opacity: 1; }
+.ligne-ing .oublier:hover { color: var(--alerte); }
+
+/* Lancement et question */
+.lancer { display: flex; justify-content: center; margin: 8px 0 20px; }
+button.principal { font-size: 1.05rem; font-weight: 600; padding: 12px 28px; border-radius: 999px; }
+.question { border-color: var(--accent); }
+.pied-question { display: flex; justify-content: flex-end; }
+
+/* Cartes de recettes avec visuel */
+.recette { padding: 0; overflow: hidden; gap: 0; }
+.recette .corps { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+.visuel {
+  height: 120px; display: flex; align-items: center; justify-content: center; gap: 14px; position: relative;
+  background: linear-gradient(135deg, #e3efe8, #c9e2d3);
+}
+.visuel-type { font-size: 3.2rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,.15)); }
+.visuel-ingr { font-size: 1.7rem; letter-spacing: 4px; background: rgba(255,255,255,.65); border-radius: 999px; padding: 4px 12px; }
+.visuel-soupe { background: linear-gradient(135deg, #fbe3cf, #f3c59f); }
+.visuel-plat { background: linear-gradient(135deg, #e3efe8, #bcdcc8); }
+.visuel-entree { background: linear-gradient(135deg, #eef5d9, #d6e9a8); }
+.visuel-dessert { background: linear-gradient(135deg, #fbe1e6, #f3bfca); }
+.visuel-accompagnement { background: linear-gradient(135deg, #fcf1cf, #f2dc93); }

@@ -25,7 +25,7 @@
         <span id="compte-frigo"></span>
         <span><button type="button" id="tout-cocher" class="lien">Tout cocher</button> · <button type="button" id="tout-decocher" class="lien">Tout décocher</button></span>
       </div>
-      <div id="puces" class="puces" aria-live="polite"></div>
+      <div id="puces" class="colonnes" aria-live="polite"></div>
       <label class="case"><input type="checkbox" id="placard" checked> J'ai les basiques du placard (ail, oignon, farine, sucre, beurre, huile, moutarde, vinaigre, bouillon, épices)</label>
     </section>
 
@@ -68,8 +68,21 @@
       </div>
     </section>
 
-    <section aria-labelledby="t-resultats" class="zone-resultats">
-      <h2 id="t-resultats">Nos propositions</h2>
+    <div class="lancer">
+      <button type="button" id="chercher" class="principal">Trouver des recettes</button>
+    </div>
+
+    <section class="bloc question" id="question" aria-labelledby="t-question" hidden>
+      <h2 id="t-question">4. Avez-vous aussi… ?</h2>
+      <p class="aide" id="question-intro"></p>
+      <div id="question-liste" class="colonnes"></div>
+      <div class="pied-question">
+        <button type="button" id="valider-question" class="principal">Voir les recettes</button>
+      </div>
+    </section>
+
+    <section aria-labelledby="t-resultats" class="zone-resultats" id="zone-resultats" hidden>
+      <h2 id="t-resultats">Recettes réalisables avec ce que vous avez</h2>
       <p id="resume" aria-live="polite"></p>
       <div id="resultats" class="grille"></div>
       <button type="button" id="plus" class="secondaire" hidden>Voir plus de recettes</button>
@@ -82,6 +95,7 @@
   </footer>
 
   <script src="recettes.js"></script>
+  <script src="categories.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
