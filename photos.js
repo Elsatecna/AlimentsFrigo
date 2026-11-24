@@ -449,5 +449,59 @@ const PHOTOS = {
   "auteur": "Popo le Chien",
   "licence": "CC0",
   "page": "https://commons.wikimedia.org/wiki/File:Houmous.jpg"
+ },
+ "Bûche de Noël au chocolat": {
+  "src": "photos/buche-de-noel-au-chocolat.jpg",
+  "auteur": "Jebulon",
+  "licence": "CC0",
+  "page": "https://commons.wikimedia.org/wiki/File:B%C3%BBche_de_No%C3%ABl_chocolat_framboise_maison.jpg"
+ },
+ "Poulet rôti aux marrons": {
+  "src": "photos/poulet-roti-aux-marrons.jpg",
+  "auteur": "Daderot",
+  "licence": "CC0",
+  "page": "https://commons.wikimedia.org/wiki/File:Chicken_and_vegetables,_Christmas_2022_-_Massachusetts.jpg"
+ },
+ "Velouté de châtaignes": {
+  "src": "photos/veloute-de-chataignes.jpg",
+  "auteur": "Luca Nebuloni from Milan, Italy",
+  "licence": "CC BY 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Pumpkin_soup_with_chestnuts_(10513766303).jpg"
+ },
+ "Muffins à la citrouille": {
+  "src": "photos/muffins-a-la-citrouille.jpg",
+  "auteur": "W.carter",
+  "licence": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Plain_vanilla_muffin_in_Tuntorp.jpg"
+ },
+ "Gigot d'agneau rôti à l'ail": {
+  "src": "photos/gigot-d-agneau-roti-a-l-ail.jpg",
+  "auteur": "Chun's Pictures",
+  "licence": "CC BY 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Gigot_d%27agneau_%C3%A0_la_po%C3%AAle.jpg"
+ },
+ "Oeufs mimosa": {
+  "src": "photos/oeufs-mimosa.jpg",
+  "auteur": "Jpbrigand2",
+  "licence": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Oeufs_momisa_2.jpg"
+ },
+ "Nids de Pâques au chocolat": {
+  "src": "photos/nids-de-paques-au-chocolat.jpg",
+  "auteur": "Kristin Ausk",
+  "licence": "CC BY-SA 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Easter_cupcakes_-_colourful_chocolate_eggs_on_green_nest_icing.jpg"
+ },
+ "Gâteau au chocolat fondant": {
+  "src": "photos/gateau-au-chocolat-fondant.jpg",
+  "auteur": "Mathieu MD",
+  "licence": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Fondant_au_chocolat_(250g_de_beurre).jpg"
+ },
+ "Pizza maison": {
+  "src": "photos/pizza-maison.jpg",
+  "auteur": "N i c o l a from Fiumicino (Rome), Italy",
+  "licence": "CC BY 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Pizza_(17450755191).jpg"
  }
 };

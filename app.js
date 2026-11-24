@@ -66,12 +66,12 @@ const LIMITE_REGIME = { "vegetalien": 0, "vegetarien": 1, "pescetarien": 2 };
 
 // Familles d'ingrédients utilisées par les régimes santé (repérées automatiquement dans chaque recette).
 const FAMILLES = {
-  viandeRouge: ["boeuf", "boeuf hache", "boeuf a braiser", "veau", "agneau"],
+  viandeRouge: ["boeuf", "boeuf hache", "boeuf a braiser", "veau", "agneau", "gigot d agneau"],
   charcuterie: ["jambon", "jambon cru", "lardons", "saucisse de morteau", "poitrine fumee"],
   alcool: ["vin blanc"],
-  sucres: ["sucre", "miel", "chocolat noir"],
+  sucres: ["sucre", "miel", "chocolat noir", "oeufs en chocolat"],
   feculents: ["pomme de terre", "pates", "riz", "semoule", "boulgour", "pain", "farine", "farine de sarrasin",
-    "pate brisee", "lentilles", "pois chiche", "haricot rouge", "patate douce", "mais", "petits pois"],
+    "pate brisee", "pain de mie", "cereales", "lentilles", "pois chiche", "haricot rouge", "patate douce", "mais", "petits pois"],
   fibres: ["poireau", "carotte", "potiron", "courge butternut", "chou vert", "chou de bruxelles", "endive", "epinard",
     "champignon", "celeri rave", "panais", "navet", "betterave cuite", "mache", "brocoli", "asperge verte", "petits pois",
     "radis", "rhubarbe", "courgette", "aubergine", "poivron", "tomate", "concombre", "haricot vert", "lentilles",
@@ -173,8 +173,10 @@ function analyser(recette, termesFrigo, avecPlacard) {
   return { lignes, utilises, dispo, total: lignes.length, couverture: dispo / lignes.length };
 }
 
-function proposer({ recettes, frigo, avecPlacard, profils, saison, type, tempsMax = 0, tri = "pertinence", complet = false }) {
-  const termes = frigo.map(canonique).filter(Boolean);
+function proposer({ recettes, frigo, avecPlacard, profils, saison, type, tempsMax = 0, tri = "pertinence", complet = false, occasion = "", autour = [], notes = {} }) {
+  // Les ingrédients « autour de » sont forcément disponibles et doivent figurer dans la recette.
+  const obligatoires = autour.map(canonique).filter(Boolean);
+  const termes = [...frigo, ...autour].map(canonique).filter(Boolean);
   const actifs = profils.length ? profils : [{ regimes: [], allergies: [], age: "" }];
   const enfants = actifs.some(p => p.age !== "" && Number(p.age) < 12);
   const seniors = actifs.some(p => p.age !== "" && Number(p.age) >= 75);
@@ -187,6 +189,10 @@ function proposer({ recettes, frigo, avecPlacard, profils, saison, type, tempsMa
       if (groupe !== type) continue;
     }
     if (tempsMax && r.temps > tempsMax) continue;
+    if (obligatoires.length) {
+      const noms = r.ingr.map(l => canonique(nomIngredient(l)));
+      if (!obligatoires.every(o => noms.some(n => correspond(n, o)))) continue;
+    }
     if (actifs.some(p => incompatibilite(r, p))) { exclues++; continue; }
     const a = analyser(r, termes, avecPlacard);
     if (complet && a.dispo < a.total) continue;
@@ -194,12 +200,17 @@ function proposer({ recettes, frigo, avecPlacard, profils, saison, type, tempsMa
     const score = a.utilises * 3 + a.couverture * 5 + (enfants && r.enfants ? 1 : 0) + (seniors && r.tendre ? 1 : 0)
       + (r.saisons.length < 4 && deSaison ? 1 : 0)
       + (fibresPrioritaires ? Math.min(profilRecette(r).fibres, 5) * 0.6 : 0);
-    resultats.push({ recette: r, ...a, deSaison, score });
+    const pourOccasion = !!occasion && (r.occasions || []).includes(occasion);
+    resultats.push({ recette: r, ...a, deSaison, pourOccasion, score });
   }
-  // Les recettes de saison restent devant ; le tri choisi s'applique à l'intérieur de chaque groupe.
-  const parTemps = tri === "rapide" ? (x, y) => x.recette.temps - y.recette.temps
+  // Ordre : recettes de l'occasion choisie, puis de saison ; le tri choisi s'applique à l'intérieur de ces groupes.
+  // Le tri par note passe avant la saison (les mieux notées d'abord, les non notées à la fin).
+  const note = x => notes[cleRecette(x.recette)] || 0;
+  const parTri = tri === "rapide" ? (x, y) => x.recette.temps - y.recette.temps
     : tri === "long" ? (x, y) => y.recette.temps - x.recette.temps : () => 0;
-  resultats.sort((x, y) => (y.deSaison - x.deSaison) || parTemps(x, y) || (y.score - x.score) || x.recette.temps - y.recette.temps);
+  resultats.sort((x, y) => (y.pourOccasion - x.pourOccasion)
+    || (tri === "note" ? note(y) - note(x) : 0)
+    || (y.deSaison - x.deSaison) || parTri(x, y) || (y.score - x.score) || x.recette.temps - y.recette.temps);
   return { resultats, exclues };
 }
 
@@ -279,6 +290,30 @@ function normaliserRecette(r) {
 }
 
 // Ingrédients qui manquent pour les recettes les plus proches, classés par nombre de recettes qu'ils débloquent.
+// « Qui cuisine » : repère dans une étape ce qu'un adulte doit faire selon l'âge du cuisinier.
+const RISQUES = [
+  { id: "four", libelle: "le four", motif: /\bfour\b|enfourn|gratin(?:er|ez)|°\s?C/i },
+  { id: "eau", libelle: "l'eau bouillante", motif: /eau bouillante|bouillante|égoutt|blanchir|ébullition|bain-marie/i },
+  { id: "feu", libelle: "la cuisson sur le feu", motif: /\bcuire|cuisson|faire revenir|revenir|dorer|saisir|sauter|poêl|casserole|cocotte|mijot|frém|caramélis|fondre|griller|torréfi|\bréchauffer|suer|nacrer|faire tomber|tomber les|pocher|roux|feu (?:vif|doux)|sirop/i },
+  { id: "couteau", libelle: "le couteau", motif: /couper|coupez|émincer|émincé|hacher|haché|trancher|tranche|tronçon|découper|ciseler|ciselé|dénoyaut|évider|éplucher|peler|en dés|rondelles|lanières|quartiers|julienne|fendre|zeste|piquer/i },
+  { id: "mixeur", libelle: "le mixeur", motif: /\bmix(?:er|ez|é)|blender/i },
+  { id: "rape", libelle: "la râpe", motif: /râp(?:er|ez|é)/i },
+];
+// Ce qu'un adulte doit obligatoirement faire selon la tranche d'âge (ado 12-18 ans, enfant 6-12 ans, jeune enfant 1-6 ans).
+const RISQUES_PAR_CUISINIER = {
+  adulte: [],
+  ado: ["eau", "mixeur"],
+  enfant: ["four", "eau", "feu", "couteau", "mixeur"],
+  jeune: ["four", "eau", "feu", "couteau", "mixeur", "rape"],
+};
+function etapesAdulte(etape, cuisinier) {
+  const interdits = RISQUES_PAR_CUISINIER[cuisinier] || [];
+  return RISQUES.filter(r => interdits.includes(r.id) && r.motif.test(etape)).map(r => r.libelle);
+}
+
+// Identifiant stable d'une recette (pour les notes et commentaires).
+function cleRecette(r) { return r.perso ? "perso:" + r.id : "base:" + r.nom; }
+
 function ingredientsManquants(options, limite = 40) {
   const { resultats } = proposer({ ...options, tri: "pertinence", complet: false });
   let maxManquants = 2, candidats = [];
@@ -292,14 +327,15 @@ function ingredientsManquants(options, limite = 40) {
     for (const l of x.lignes) {
       if (l.frigo || l.base) continue;
       const nom = nomIngredient(l.ligne), cle = canonique(nom);
-      if (!parNom.has(cle)) parNom.set(cle, { nom, recettes: [], deSaison: 0 });
+      if (!parNom.has(cle)) parNom.set(cle, { nom, recettes: [], deSaison: 0, occasion: 0 });
       const e = parNom.get(cle);
       e.recettes.push(x.recette.nom);
       if (x.deSaison) e.deSaison++;
+      if (x.pourOccasion) e.occasion++;
     }
   }
   return [...parNom.values()]
-    .sort((a, b) => (b.deSaison - a.deSaison) || (b.recettes.length - a.recettes.length) || a.nom.localeCompare(b.nom))
+    .sort((a, b) => (b.occasion - a.occasion) || (b.deSaison - a.deSaison) || (b.recettes.length - a.recettes.length) || a.nom.localeCompare(b.nom))
     .slice(0, limite);
 }
 
@@ -327,7 +363,7 @@ function ajusterQuantite(qte, personnes, nom = "", base = 4) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { normaliser, canonique, correspond, incompatibilite, proposer, ajusterQuantite, saisonDuMois, conseils, profilRecette, classer, ingredientsManquants, detecter, lireIngredient, normaliserRecette };
+  module.exports = { normaliser, canonique, correspond, incompatibilite, proposer, ajusterQuantite, saisonDuMois, conseils, profilRecette, classer, ingredientsManquants, detecter, lireIngredient, normaliserRecette, cleRecette, etapesAdulte };
 }
 
 // ============ Interface ============
@@ -356,6 +392,10 @@ if (typeof document !== "undefined") {
   if (!etat.connus) etat.connus = [...etat.frigo];
   if (!etat.tri) etat.tri = "pertinence";
   if (!etat.tempsMax) etat.tempsMax = 0;
+  if (!Array.isArray(etat.autour)) etat.autour = [];
+  if (typeof etat.occasion !== "string") etat.occasion = "";
+  if (!etat.cuisinier) etat.cuisinier = "adulte";
+  if (!etat.avis || typeof etat.avis !== "object") etat.avis = {};
   etat.mesRecettes = (Array.isArray(etat.mesRecettes) ? etat.mesRecettes : []).map(normaliserRecette).filter(Boolean);
   const toutesRecettes = () => [...RECETTES, ...etat.mesRecettes];
   etat.saison = etat.saisonManuelle ? etat.saison : saisonDuMois(new Date().getMonth() + 1);
@@ -538,10 +578,43 @@ if (typeof document !== "undefined") {
     maj();
   });
   $("#tri").addEventListener("change", e => { etat.tri = e.target.value; maj(); });
+  $("#occasion").addEventListener("change", e => { etat.occasion = e.target.value; maj(); });
+  $("#cuisinier").addEventListener("change", e => { etat.cuisinier = e.target.value; maj(); });
+
+  // --- « Je veux faire une recette autour de » : 1 à 3 ingrédients obligatoires ---
+  function rendreAutour() {
+    $("#autour-puces").innerHTML = etat.autour.map((nom, i) =>
+      `<span class="puce-autour">${esc(classer(nom).emoji)} ${esc(nom)}<button type="button" data-retirer-autour="${i}" aria-label="Retirer ${esc(nom)}">×</button></span>`).join("");
+    const plein = etat.autour.length >= 3;
+    $("#autour-saisie").disabled = plein; $("#autour-ajout").disabled = plein;
+    $("#autour-saisie").placeholder = plein ? "3 ingrédients maximum" : "ex. potiron, puis Entrée";
+  }
+  function remplirSuggestions() {
+    const vus = new Set(), noms = [];
+    for (const nom of [...etat.connus, ...toutesRecettes().flatMap(r => r.ingr.map(nomIngredient))]) {
+      const c = canonique(nom); if (!vus.has(c)) { vus.add(c); noms.push(nom); }
+    }
+    noms.sort((a, b) => normaliser(a).localeCompare(normaliser(b)));
+    $("#liste-ingredients").innerHTML = noms.map(n => `<option value="${esc(n)}"></option>`).join("");
+  }
+  function ajouterAutour() {
+    const champ = $("#autour-saisie");
+    champ.value.split(/[,;]/).map(t => t.trim()).filter(Boolean).forEach(t => {
+      if (etat.autour.length < 3 && !etat.autour.some(a => canonique(a) === canonique(t))) etat.autour.push(t);
+    });
+    champ.value = ""; rendreAutour(); maj();
+  }
+  $("#autour-saisie").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); ajouterAutour(); } });
+  $("#autour-saisie").addEventListener("change", e => { if (e.target.value && $("#liste-ingredients").querySelector(`option[value="${CSS.escape ? CSS.escape(e.target.value) : e.target.value}"]`)) ajouterAutour(); });
+  $("#autour-ajout").addEventListener("click", ajouterAutour);
+  $("#autour-puces").addEventListener("click", e => {
+    const i = e.target.dataset.retirerAutour; if (i == null) return;
+    etat.autour.splice(Number(i), 1); rendreAutour(); maj();
+  });
   $("#plus").addEventListener("click", () => { affichees += 10; rendreResultats(); });
 
   // --- Étape « Avez-vous aussi… ? » ---
-  const optionsRecherche = () => ({ recettes: toutesRecettes(), frigo: etat.frigo, avecPlacard: etat.placard, profils: convives(), saison: etat.saison, type: etat.type, tempsMax: etat.tempsMax, tri: etat.tri });
+  const optionsRecherche = () => ({ recettes: toutesRecettes(), frigo: etat.frigo, avecPlacard: etat.placard, profils: convives(), saison: etat.saison, type: etat.type, tempsMax: etat.tempsMax, tri: etat.tri, occasion: etat.occasion, autour: etat.autour, notes: notesParRecette() });
   if (!etat.etape) etat.etape = "saisie";
   if (!etat.question) etat.question = [];
 
@@ -607,13 +680,45 @@ if (typeof document !== "undefined") {
     if (resultats.length && resultats.length < 10) resume += " Pour plus d'idées, cochez d'autres ingrédients" + (etat.tempsMax ? " ou allongez le temps maximum." : ".");
     $("#resume").textContent = resume;
 
-    $("#resultats").innerHTML = resultats.slice(0, affichees).map(x => carte(x, n, table)).join("");
+    if (etat.autour.length) resume += ` Toutes contiennent : ${etat.autour.join(", ")}.`;
+    if (etat.occasion) {
+      const nbOcc = resultats.filter(x => x.pourOccasion).length;
+      resume += nbOcc ? ` ${nbOcc} idée${nbOcc > 1 ? "s" : ""} pour ${ICONES_OCCASION[etat.occasion]} en tête de liste.` : ` Aucune recette spéciale ${ICONES_OCCASION[etat.occasion]} avec ces ingrédients : relancez la recherche pour voir ce qu'il manque.`;
+    }
+    if (etat.cuisinier !== "adulte") resume += ` Cuisinier : ${NOMS_CUISINIER[etat.cuisinier]}, les gestes réservés aux adultes sont signalés en rouge.`;
+    $("#resume").textContent = resume;
+    derniersResultats = new Map();
+    $("#resultats").innerHTML = resultats.slice(0, affichees).map(x => carte(x, n)).join("");
     $("#plus").hidden = resultats.length <= affichees;
   }
 
-  function carte(x, n, table) {
+  // --- Notes et commentaires (gardés dans le navigateur) ---
+  const avisDe = r => etat.avis[cleRecette(r)] || { note: 0, commentaires: [] };
+  function notesParRecette() {
+    const n = {}; for (const [k, v] of Object.entries(etat.avis)) if (v.note) n[k] = v.note; return n;
+  }
+  function etoiles(r, interactif) {
+    const note = avisDe(r).note || 0, cle = esc(cleRecette(r));
+    if (!interactif) return note ? `<span class="etoiles-lecture" aria-label="Noté ${note} sur 5">${"★".repeat(note)}<span class="vide">${"★".repeat(5 - note)}</span></span>` : "";
+    return `<span class="etoiles" role="group" aria-label="Noter cette recette">${[1, 2, 3, 4, 5].map(i =>
+      `<button type="button" class="etoile${i <= note ? " on" : ""}" data-noter="${cle}" data-note="${i}" aria-label="${i} étoile${i > 1 ? "s" : ""} sur 5" aria-pressed="${i <= note}">★</button>`).join("")}</span>`;
+  }
+  function noter(cle, note) {
+    const a = etat.avis[cle] || { note: 0, commentaires: [] };
+    a.note = a.note === note ? 0 : note; // un second clic sur la même étoile retire la note
+    etat.avis[cle] = a; sauver();
+  }
+
+  const ICONES_OCCASION = { noel: "🎄 Noël", halloween: "🎃 Halloween", paques: "🐣 Pâques", anniversaire: "🎂 Anniversaire" };
+  const NOMS_CUISINIER = { ado: "un ado (12-18 ans)", enfant: "un enfant (6-12 ans)", jeune: "un jeune enfant (1-6 ans)" };
+  const dureeCourte = t => t >= 60 ? `${Math.floor(t / 60)} h${t % 60 ? String(t % 60).padStart(2, "0") : ""}` : `${t} min`;
+  const groupeDe = r => r.type === "dessert" ? "dessert" : (r.type === "entrée" || r.type === "accompagnement") ? "entree" : "plat";
+  let derniersResultats = new Map(); // clé de recette → résultat affiché, pour la grande vue
+
+  function badgesDe(x, max = 99) {
     const r = x.recette;
-    const badges = [
+    return [
+      x.pourOccasion ? `<span class="badge occasion">${ICONES_OCCASION[etat.occasion]}</span>` : "",
       r.perso ? `<span class="badge perso">Ma recette</span>` : "",
       x.deSaison ? `<span class="badge saison">De saison</span>` : `<span class="badge hors">Hors saison</span>`,
       `<span class="badge">${ETIQ_REGIME[r.regime]}</span>`,
@@ -622,26 +727,134 @@ if (typeof document !== "undefined") {
       profilRecette(r).lowCarb ? `<span class="badge">Low carb</span>` : "",
       profilRecette(r).fibres >= 3 ? `<span class="badge">Riche en fibres</span>` : "",
       r.epice ? `<span class="badge">Épicé</span>` : "",
-    ].join("");
-    const avis = conseils(r, table);
-    const duree = r.temps >= 60 ? `${Math.floor(r.temps / 60)} h${r.temps % 60 ? String(r.temps % 60).padStart(2, "0") : ""}` : `${r.temps} min`;
-    const groupe = r.type === "dessert" ? "dessert" : (r.type === "entrée" || r.type === "accompagnement") ? "entree" : "plat";
-    return `<article class="recette groupe-${groupe}">
-      ${visuel(r)}
-      <header class="titre-recette"><h3>${esc(r.nom)}</h3><span class="meta">${esc(r.type)}</span></header>
-      <div class="corps">
-      <p class="temps"><span aria-hidden="true">⏱</span> ${duree} <span>(préparation + cuisson)</span></p>
-      <div class="badges">${badges}</div>
-      <p class="complet">Vous avez tous les ingrédients${x.utilises ? ` · utilise ${x.utilises} produit${x.utilises > 1 ? "s" : ""} de votre frigo` : ""}</p>
-      ${avis.length ? `<ul class="avis">${avis.map(a => `<li>${esc(a)}</li>`).join("")}</ul>` : ""}
-      <details><summary>Voir la recette</summary>
-        <ul class="ingr">${x.lignes.map(l => `<li class="${l.frigo ? "ok" : l.base ? "base" : ""}">${esc(nomIngredient(l.ligne))}${qteIngredient(l.ligne) ? ` — ${esc(ajusterQuantite(qteIngredient(l.ligne), n, nomIngredient(l.ligne), r.personnes || 4))}` : ""}</li>`).join("")}</ul>
-        <p class="note">+ sel, poivre, huile et eau.</p>
-        <ol>${r.etapes.map(e => `<li>${esc(e)}</li>`).join("")}</ol>
-      </details>
-      ${r.perso ? `<p class="actions-carte"><button type="button" class="lien" data-modifier-recette="${r.id}">Modifier</button></p>` : ""}
+    ].filter(Boolean).slice(0, max).join("");
+  }
+  const listeIngredients = (x, n) => `<ul class="ingr">${x.lignes.map(l => `<li class="${l.frigo ? "ok" : l.base ? "base" : ""}">${esc(nomIngredient(l.ligne))}${qteIngredient(l.ligne) ? ` <span class="qte">${esc(ajusterQuantite(qteIngredient(l.ligne), n, nomIngredient(l.ligne), x.recette.personnes || 4))}</span>` : ""}</li>`).join("")}</ul>`;
+
+  // Tuile recto/verso : recto = photo et titre, verso = ingrédients et bouton « C'est parti ! ».
+  function carte(x, n) {
+    const r = x.recette, cle = esc(cleRecette(r)), nbCom = avisDe(r).commentaires.length;
+    derniersResultats.set(cleRecette(r), x);
+    return `<article class="tuile groupe-${groupeDe(r)}" data-cle="${cle}" tabindex="0" role="button" aria-pressed="false" aria-label="${esc(r.nom)} : retourner la tuile pour voir la recette">
+      <div class="tuile-interieur">
+        <div class="face recto">
+          ${visuel(r)}
+          <header class="titre-recette"><h3>${esc(r.nom)}</h3><span class="meta">${esc(r.type)} · ⏱ ${dureeCourte(r.temps)} ${etoiles(r, false)}</span></header>
+          <div class="badges">${badgesDe(x, 3)}</div>
+          <span class="retourner" aria-hidden="true">↻ Voir la recette</span>
+        </div>
+        <div class="face verso">
+          <header class="titre-recette"><h3>${esc(r.nom)}</h3><span class="meta">⏱ ${dureeCourte(r.temps)} · pour ${n} pers.</span></header>
+          <div class="verso-corps">
+            <p class="sous-titre">Ingrédients</p>
+            ${listeIngredients(x, n)}
+            <p class="verso-etapes">${r.etapes.length} étape${r.etapes.length > 1 ? "s" : ""}${etat.cuisinier !== "adulte" && r.etapes.some(e => etapesAdulte(e, etat.cuisinier).length) ? ` · <span class="alerte-adulte">avec l'aide d'un adulte</span>` : ""}</p>
+          </div>
+          <div class="verso-pied">
+            ${etoiles(r, true)}
+            <span class="nb-com">💬 ${nbCom}</span>
+            <button type="button" class="principal cest-parti" data-ouvrir="${cle}">C'est parti !</button>
+          </div>
+        </div>
       </div>
     </article>`;
+  }
+
+  // Grande vue de la recette.
+  let dernierFocus = null;
+  function ouvrirRecette(cle) {
+    const x = derniersResultats.get(cle); if (!x) return;
+    const r = x.recette, table = convives(), n = Math.max(1, table.length), a = avisDe(r), avis = conseils(r, table);
+    const cuisinier = etat.cuisinier;
+    const etapes = r.etapes.map(e => {
+      const adulte = etapesAdulte(e, cuisinier);
+      return adulte.length
+        ? `<li class="etape-adulte">${esc(e)}<span class="mention-adulte">⚠️ À faire par un adulte : ${esc(adulte.join(", "))}.</span></li>`
+        : `<li>${esc(e)}</li>`;
+    }).join("");
+    $("#modale-contenu").innerHTML = `
+      <div class="grande groupe-${groupeDe(r)}">
+        ${visuel(r)}
+        <header class="titre-recette"><h2 id="modale-titre">${esc(r.nom)}</h2><span class="meta">${esc(r.type)} · ⏱ ${dureeCourte(r.temps)} (préparation + cuisson) · pour ${n} personne${n > 1 ? "s" : ""}</span></header>
+        <div class="grande-corps">
+          <div class="badges">${badgesDe(x)}</div>
+          ${cuisinier !== "adulte" ? `<p class="bandeau-cuisinier">Recette réalisée par ${NOMS_CUISINIER[cuisinier]} : les étapes <strong>en rouge</strong> doivent obligatoirement être faites par un adulte.</p>` : ""}
+          ${avis.length ? `<ul class="avis">${avis.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
+          <div class="grande-colonnes">
+            <div><h3>Ingrédients</h3>${listeIngredients(x, n)}<p class="note">+ sel, poivre, huile et eau.</p></div>
+            <div><h3>Préparation</h3><ol class="etapes">${etapes}</ol></div>
+          </div>
+          <div class="avis-recette">
+            <h3>Votre avis</h3>
+            <p>${etoiles(r, true)} <span class="aide-note">${a.note ? `Vous avez donné ${a.note}/5` : "Pas encore noté"}</span></p>
+            <form class="form-commentaire" data-commenter="${esc(cleRecette(r))}">
+              <label for="nouveau-commentaire">Ajouter un commentaire</label>
+              <textarea id="nouveau-commentaire" rows="2" maxlength="500" placeholder="ex. J'ai ajouté une pincée de muscade, un régal !"></textarea>
+              <button type="submit">Publier</button>
+            </form>
+            <ul class="commentaires">${a.commentaires.map((c, i) => `<li><p>${esc(c.texte)}</p><small>${esc(new Date(c.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }))} · <button type="button" class="lien" data-supprimer-com="${esc(cleRecette(r))}" data-i="${i}">Supprimer</button></small></li>`).reverse().join("") || `<li class="vide">Aucun commentaire pour l'instant.</li>`}</ul>
+          </div>
+          ${r.perso ? `<p class="actions-carte"><button type="button" class="lien" data-modifier-recette="${r.id}">Modifier ma recette</button></p>` : ""}
+        </div>
+      </div>`;
+    if ($("#modale").hidden) dernierFocus = document.activeElement;
+    $("#modale").hidden = false; document.body.classList.add("modale-ouverte");
+    $(".modale-boite").focus();
+  }
+  function fermerRecette() {
+    $("#modale").hidden = true; document.body.classList.remove("modale-ouverte");
+    if (dernierFocus && dernierFocus.focus) dernierFocus.focus();
+  }
+
+  // Clics sur les tuiles (retourner), les étoiles, « C'est parti ! » et dans la grande vue.
+  document.addEventListener("click", e => {
+    const t = e.target;
+    if (t.closest("[data-fermer]")) { fermerRecette(); return; }
+    const etoile = t.closest("[data-noter]");
+    if (etoile) {
+      noter(etoile.dataset.noter, Number(etoile.dataset.note));
+      const ouverte = !$("#modale").hidden ? etoile.dataset.noter : null;
+      rafraichirTuiles(); if (ouverte) ouvrirRecette(ouverte);
+      return;
+    }
+    const ouvrir = t.closest("[data-ouvrir]");
+    if (ouvrir) { ouvrirRecette(ouvrir.dataset.ouvrir); return; }
+    const sup = t.closest("[data-supprimer-com]");
+    if (sup) {
+      const a = etat.avis[sup.dataset.supprimerCom]; a.commentaires.splice(Number(sup.dataset.i), 1); sauver();
+      ouvrirRecette(sup.dataset.supprimerCom); rafraichirTuiles(); return;
+    }
+    const tuile = t.closest(".tuile");
+    if (tuile && !t.closest("button, a, input, textarea, select, label")) retourner(tuile);
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && !$("#modale").hidden) { fermerRecette(); return; }
+    if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("tuile")) { e.preventDefault(); retourner(e.target); }
+    // Garde le focus dans la grande vue tant qu'elle est ouverte.
+    if (e.key === "Tab" && !$("#modale").hidden) {
+      const f = [...document.querySelectorAll(".modale-boite button, .modale-boite textarea, .modale-boite a")].filter(el => !el.disabled);
+      if (!f.length) return;
+      if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+      else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+    }
+  });
+  function retourner(tuile) {
+    const r = tuile.classList.toggle("retournee");
+    tuile.setAttribute("aria-pressed", String(r));
+  }
+  document.addEventListener("submit", e => {
+    const f = e.target.closest("[data-commenter]"); if (!f) return;
+    e.preventDefault();
+    const texte = f.querySelector("textarea").value.trim(); if (!texte) return;
+    const cle = f.dataset.commenter, a = etat.avis[cle] || { note: 0, commentaires: [] };
+    a.commentaires.push({ texte: texte.slice(0, 500), date: new Date().toISOString() });
+    etat.avis[cle] = a; sauver(); ouvrirRecette(cle); rafraichirTuiles();
+  });
+  // Met à jour les tuiles en gardant celles qui sont retournées.
+  function rafraichirTuiles() {
+    const retournees = new Set([...document.querySelectorAll(".tuile.retournee")].map(t => t.dataset.cle));
+    rendreResultats();
+    document.querySelectorAll(".tuile").forEach(t => { if (retournees.has(t.dataset.cle)) { t.classList.add("retournee"); t.setAttribute("aria-pressed", "true"); } });
   }
 
   // Visuel illustré : couleur selon le type de plat, pictogrammes des ingrédients principaux.
@@ -728,6 +941,7 @@ if (typeof document !== "undefined") {
       <span><strong>${esc(r.nom)}</strong> <small>${esc(r.type)} · ${r.temps} min · ${r.ingr.length} ingrédients</small></span>
       <button type="button" class="lien" data-modifier-recette="${r.id}">Modifier</button></li>`).join("");
     $("#exporter").disabled = !liste.length;
+    if (typeof remplirSuggestions === "function") remplirSuggestions();
   }
 
   // Coche automatiquement les allergènes détectés quand on tape les ingrédients.
@@ -804,7 +1018,7 @@ if (typeof document !== "undefined") {
   $("#nouvelle-recette").addEventListener("click", () => ouvrirFormulaire(null));
   document.addEventListener("click", e => {
     const id = e.target.dataset && e.target.dataset.modifierRecette;
-    if (id) ouvrirFormulaire(etat.mesRecettes.find(r => r.id === id));
+    if (id) { if (!$("#modale").hidden) fermerRecette(); ouvrirFormulaire(etat.mesRecettes.find(r => r.id === id)); }
   });
 
   $("#exporter").addEventListener("click", () => {
@@ -852,5 +1066,8 @@ if (typeof document !== "undefined") {
   $("#temps-max-valeur").textContent = libelleTemps(etat.tempsMax || PAS_DE_LIMITE);
   $("#temps-max").setAttribute("aria-valuetext", libelleTemps(etat.tempsMax || PAS_DE_LIMITE));
   $("#tri").value = etat.tri;
+  $("#occasion").value = etat.occasion;
+  $("#cuisinier").value = etat.cuisinier;
+  rendreAutour(); remplirSuggestions();
   rendreFrigo(); rendreProfils(); rendreEtapes(); rendreResultats(); rendreMesRecettes(); sauver();
 }

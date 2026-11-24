@@ -221,6 +221,41 @@ const RECETTES = [
     ingr: ["tomate|6", "poivron|2", "oignon|1", "oeuf|6", "cumin|1 c. à café"],
     etapes: ["Faire revenir oignon et poivrons avec le cumin et du paprika.", "Ajouter les tomates en dés et mijoter 15 min.", "Creuser des puits, y casser les oeufs, couvrir et cuire 6 min."] },
 
+  // ---------- OCCASIONS SPÉCIALES ----------
+  { nom: "Bûche de Noël au chocolat", type: "dessert", saisons: ["hiver"], regime: "vege", porc: false, allergenes: ["gluten", "lactose", "oeuf"], temps: 60, epice: false, enfants: true, tendre: true, alertes: [], occasions: ["noel"],
+    ingr: ["oeuf|4", "sucre|120 g", "farine|80 g", "chocolat noir|200 g", "crème fraîche|25 cl", "beurre|30 g"],
+    etapes: ["Fouetter les jaunes avec 100 g de sucre, ajouter la farine puis les blancs montés en neige.", "Étaler sur une plaque et cuire 10 min à 200 °C ; rouler aussitôt dans un torchon humide.", "Faire fondre le chocolat avec la crème et le beurre ; laisser épaissir.", "Dérouler le biscuit, tartiner de ganache, rouler et napper le dessus. Strier à la fourchette."] },
+  { nom: "Poulet rôti aux marrons", type: "plat", saisons: ["hiver", "automne"], regime: "viande", porc: false, allergenes: [], temps: 100, epice: false, enfants: true, tendre: false, alertes: [], occasions: ["noel"],
+    ingr: ["poulet|1 entier", "marrons cuits|400 g", "échalote|4", "thym|quelques brins", "beurre|30 g"],
+    etapes: ["Préchauffer le four à 200 °C. Saler, poivrer et beurrer le poulet.", "Rôtir 1 h en arrosant.", "Ajouter les marrons et les échalotes autour du poulet, poursuivre 25 min.", "Découper et servir avec le jus."] },
+  { nom: "Velouté de châtaignes", type: "soupe", saisons: ["hiver", "automne"], regime: "vege", porc: false, allergenes: ["lactose"], temps: 35, epice: false, enfants: true, tendre: true, alertes: [], occasions: ["noel"],
+    ingr: ["marrons cuits|400 g", "oignon|1", "bouillon de légumes|80 cl", "crème fraîche|10 cl"],
+    etapes: ["Faire revenir l'oignon émincé.", "Ajouter les marrons et le bouillon, cuire 20 min.", "Mixer avec la crème, assaisonner."] },
+  { nom: "Muffins à la citrouille", type: "dessert", saisons: ["automne"], regime: "vege", porc: false, allergenes: ["gluten", "oeuf"], temps: 35, epice: false, enfants: true, tendre: true, alertes: [], occasions: ["halloween"],
+    ingr: ["potiron|250 g", "farine|200 g", "sucre|100 g", "oeuf|2", "levure chimique|1 sachet", "cannelle|1 c. à café"],
+    etapes: ["Cuire le potiron à la vapeur et l'écraser en purée.", "Mélanger oeufs, sucre, purée et 8 cl d'huile, puis farine, levure et cannelle.", "Répartir dans des moules à muffins et cuire 20 min à 180 °C."] },
+  { nom: "Mini-pizzas momies", type: "plat", saisons: ["automne", "hiver", "printemps", "été"], regime: "vege", porc: false, allergenes: ["gluten", "lactose"], temps: 20, epice: false, enfants: true, tendre: true, alertes: [], occasions: ["halloween", "anniversaire"],
+    ingr: ["pain de mie|8 tranches", "sauce tomate|15 cl", "mozzarella|200 g", "olive|8"],
+    etapes: ["Tartiner les tranches de pain de mie de sauce tomate.", "Disposer des bandes de mozzarella en croisillons, comme des bandelettes de momie.", "Ajouter deux rondelles d'olive pour les yeux, cuire 8 min à 200 °C."] },
+  { nom: "Gigot d'agneau rôti à l'ail", type: "plat", saisons: ["printemps"], regime: "viande", porc: false, allergenes: [], temps: 90, epice: false, enfants: true, tendre: false, alertes: [], occasions: ["paques"],
+    ingr: ["gigot d'agneau|1,5 kg", "ail|6 gousses", "romarin|2 brins", "pomme de terre nouvelle|1 kg"],
+    etapes: ["Piquer le gigot de gousses d'ail, l'huiler, saler, poivrer, ajouter le romarin.", "Rôtir 1 h à 200 °C entouré des pommes de terre, en arrosant.", "Laisser reposer 10 min sous une feuille d'aluminium avant de trancher."] },
+  { nom: "Oeufs mimosa", type: "entrée", saisons: ["printemps", "été"], regime: "vege", porc: false, allergenes: ["oeuf"], temps: 25, epice: false, enfants: true, tendre: true, alertes: [], occasions: ["paques"],
+    ingr: ["oeuf|6", "mayonnaise|4 c. à soupe", "ciboulette|1 bouquet"],
+    etapes: ["Cuire les oeufs 10 min à l'eau bouillante, les refroidir et les écaler.", "Couper en deux, écraser les jaunes avec la mayonnaise.", "Garnir les blancs, parsemer de jaune émietté et de ciboulette."] },
+  { nom: "Nids de Pâques au chocolat", type: "dessert", saisons: ["printemps"], regime: "vege", porc: false, allergenes: ["gluten", "lactose"], temps: 20, epice: false, enfants: true, tendre: false, alertes: [], occasions: ["paques"],
+    ingr: ["chocolat noir|200 g", "céréales|100 g", "oeufs en chocolat|1 sachet"],
+    etapes: ["Faire fondre le chocolat au bain-marie.", "Mélanger avec les céréales.", "Former des petits nids dans des caissettes, déposer les oeufs en chocolat, laisser durcir au frais."] },
+  { nom: "Gâteau au chocolat fondant", type: "dessert", saisons: ["printemps", "été", "automne", "hiver"], regime: "vege", porc: false, allergenes: ["gluten", "lactose", "oeuf"], temps: 40, epice: false, enfants: true, tendre: true, alertes: [], occasions: ["anniversaire", "noel"],
+    ingr: ["chocolat noir|200 g", "beurre|150 g", "sucre|150 g", "oeuf|4", "farine|50 g"],
+    etapes: ["Faire fondre le chocolat avec le beurre.", "Fouetter les oeufs et le sucre, ajouter le chocolat puis la farine.", "Verser dans un moule beurré et cuire 20 min à 180 °C : le coeur doit rester fondant."] },
+  { nom: "Gâteau au yaourt", type: "dessert", saisons: ["printemps", "été", "automne", "hiver"], regime: "vege", porc: false, allergenes: ["gluten", "lactose", "oeuf"], temps: 45, epice: false, enfants: true, tendre: true, alertes: [], occasions: ["anniversaire"],
+    ingr: ["yaourt|1 pot", "farine|3 pots", "sucre|2 pots", "oeuf|3", "levure chimique|1 sachet"],
+    etapes: ["Vider le yaourt dans un saladier et garder le pot comme mesure.", "Ajouter le sucre, les oeufs, la farine, la levure puis 1/2 pot d'huile.", "Verser dans un moule huilé et cuire 35 min à 180 °C."] },
+  { nom: "Pizza maison", type: "plat", saisons: ["printemps", "été", "automne", "hiver"], regime: "vege", porc: false, allergenes: ["gluten", "lactose"], temps: 90, epice: false, enfants: true, tendre: false, alertes: [], occasions: ["anniversaire"],
+    ingr: ["farine|300 g", "levure de boulanger|1 sachet", "sauce tomate|20 cl", "mozzarella|250 g", "champignon|150 g", "basilic|quelques feuilles"],
+    etapes: ["Mélanger farine, levure, 1 c. à café de sel, 2 c. à soupe d'huile et 18 cl d'eau tiède ; pétrir 10 min et laisser lever 1 h.", "Étaler la pâte, couvrir de sauce tomate, de mozzarella et de champignons émincés.", "Cuire 12 min à 250 °C, ajouter le basilic."] },
+
   // ---------- TOUTE L'ANNÉE ----------
   { nom: "Pâtes carbonara", type: "plat", saisons: ["printemps", "été", "automne", "hiver"], regime: "viande", porc: true, allergenes: ["gluten", "lactose", "oeuf"], temps: 20, epice: false, enfants: true, tendre: true, alertes: [],
     ingr: ["pâtes|400 g", "lardons|200 g", "oeuf|4", "parmesan|80 g"],
@@ -247,3 +282,12 @@ const RECETTES = [
     ingr: ["colin|4 filets", "carotte|2", "poireau|1", "citron|1"],
     etapes: ["Couper les légumes en julienne.", "Déposer sur du papier cuisson légumes, poisson, rondelle de citron, huile, sel et poivre ; fermer.", "Cuire 20 min à 180 °C."] },
 ];
+
+// Recettes existantes qui conviennent aussi à une occasion spéciale.
+const OCCASIONS_RECETTES = {
+  "Velouté de potiron": ["halloween"], "Gratin de butternut": ["halloween"], "Pommes au four à la cannelle": ["halloween"], "Crumble aux pommes": ["halloween"],
+  "Saumon au four et poireaux fondants": ["noel"], "Poires au chocolat": ["noel"], "Salade d'agrumes à la menthe": ["noel"], "Velouté de chou-fleur": ["noel"], "Truite au four et poireaux": ["noel"],
+  "Navarin d'agneau printanier": ["paques"], "Asperges vertes rôties et oeuf mollet": ["paques"], "Oeufs cocotte aux épinards": ["paques"], "Tarte à la rhubarbe": ["paques"], "Velouté d'asperges vertes": ["paques"], "Frittata aux asperges et aux herbes": ["paques"],
+  "Crêpes": ["anniversaire"], "Clafoutis aux cerises": ["anniversaire"], "Brochettes de poulet et poivrons": ["anniversaire"], "Houmous et bâtonnets de légumes": ["anniversaire"], "Pâtes au pesto": ["anniversaire"], "Fraises à la menthe": ["anniversaire"],
+};
+RECETTES.forEach(r => { r.occasions = [...new Set([...(r.occasions || []), ...(OCCASIONS_RECETTES[r.nom] || [])])]; });

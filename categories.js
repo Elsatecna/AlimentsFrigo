@@ -5,7 +5,7 @@ const CATEGORIES = [
     "lait de coco": "🥥", "tomate concassée": "🥫", "huile": "🫒", "vinaigre": "🫙", "moutarde": "🫙",
     "bouillon de légumes": "🍲", "sucre": "🍬", "miel": "🍯", "chocolat noir": "🍫", "tahini": "🫙", "tamari": "🫙",
     "graines de sésame": "🌰", "noix": "🌰", "pignons de pin": "🌰", "amande": "🌰", "noisette": "🌰", "vin blanc": "🍷",
-    "maïs": "🌽", "olive": "🫒", "câpre": "🫙", "sauce tomate": "🥫", "confiture": "🍯" } },
+    "maïs": "🌽", "olive": "🫒", "levure chimique": "🫙", "levure de boulanger": "🫙", "mayonnaise": "🫙", "oeufs en chocolat": "🍫", "câpre": "🫙", "sauce tomate": "🥫", "confiture": "🍯" } },
   { id: "legumineuses", nom: "Légumineuses et tofu", icone: "🫘", items: {
     "lentilles": "🫘", "pois chiche": "🫘", "haricot rouge": "🫘", "haricot blanc": "🫘", "tofu ferme": "🧈", "tofu": "🧈" } },
   { id: "legumes", nom: "Légumes", icone: "🥕", items: {
@@ -19,9 +19,9 @@ const CATEGORIES = [
   { id: "fruits", nom: "Fruits", icone: "🍎", items: {
     "pomme": "🍎", "poire": "🍐", "orange": "🍊", "clémentine": "🍊", "mandarine": "🍊", "pamplemousse": "🍊", "citron": "🍋",
     "fraise": "🍓", "framboise": "🍓", "cerise": "🍒", "pêche": "🍑", "abricot": "🍑", "melon": "🍈", "pastèque": "🍉",
-    "banane": "🍌", "kiwi": "🥝", "raisin": "🍇", "ananas": "🍍", "mangue": "🥭", "prune": "🫐", "figue": "🫐", "myrtille": "🫐" } },
+    "banane": "🍌", "kiwi": "🥝", "raisin": "🍇", "ananas": "🍍", "mangue": "🥭", "prune": "🫐", "figue": "🫐", "myrtille": "🫐", "marrons cuits": "🌰", "marron": "🌰", "châtaigne": "🌰" } },
   { id: "viandes", nom: "Viandes et charcuterie", icone: "🥩", items: {
-    "boeuf": "🥩", "veau": "🥩", "agneau": "🥩", "porc": "🥩", "poulet": "🍗", "dinde": "🍗", "canard": "🍗",
+    "boeuf": "🥩", "veau": "🥩", "gigot d'agneau": "🍖", "agneau": "🥩", "porc": "🥩", "poulet": "🍗", "dinde": "🍗", "canard": "🍗",
     "jambon": "🍖", "lardons": "🥓", "poitrine fumée": "🥓", "saucisse": "🌭", "chorizo": "🌭" } },
   { id: "poissons", nom: "Poissons et fruits de mer", icone: "🐟", items: {
     "thon en conserve": "🐟", "saumon": "🐟", "cabillaud": "🐟", "colin": "🐟", "truite": "🐟", "maquereau": "🐟", "thon": "🐟", "sardine": "🐟",
@@ -32,7 +32,7 @@ const CATEGORIES = [
     "fromage": "🧀", "gruyère": "🧀", "emmental": "🧀", "comté": "🧀" } },
   { id: "feculents", nom: "Féculents et céréales", icone: "🌾", items: {
     "pâtes": "🍝", "riz": "🍚", "semoule": "🌾", "boulgour": "🌾", "quinoa": "🌾", "pain": "🍞", "farine de sarrasin": "🌾",
-    "farine": "🌾", "pâte brisée": "🥧", "pâte feuilletée": "🥧" } },
+    "farine": "🌾", "pâte brisée": "🥧", "pâte feuilletée": "🥧", "pain de mie": "🍞", "céréales": "🥣" } },
   { id: "herbes", nom: "Herbes et épices", icone: "🌿", items: {
     "persil": "🌿", "menthe": "🌿", "basilic": "🌿", "ciboulette": "🌿", "thym": "🌿", "romarin": "🌿", "aneth": "🌿",
     "coriandre": "🌿", "curry": "🌶️", "cumin": "🌶️", "paprika": "🌶️", "piment": "🌶️", "cannelle": "🟤", "vanille": "🟤", "muscade": "🟤" } },

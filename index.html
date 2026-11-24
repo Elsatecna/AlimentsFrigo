@@ -5,17 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Select &amp; Cook! · Recettes de saison</title>
   <meta name="description" content="Des recettes de saison à partir de ce qu'il y a dans votre frigo, adaptées à l'âge et au régime de chaque convive.">
-  <link rel="stylesheet" href="style.css?v=20261124d">
+  <link rel="stylesheet" href="style.css?v=20261124f">
 </head>
 <body>
   <header class="entete">
-    <h1>Select &amp; Cook!</h1>
+    <div class="titre-anime"><h1>Select &amp; Cook!</h1>
+    <div class="sauteurs" aria-hidden="true"><span>🥕</span><span>🍅</span><span>🥦</span><span>🍋</span><span>🍓</span><span>🍆</span><span>🧀</span><span>🍄</span><span>🥑</span></div></div>
     <p>Dites ce qu'il y a dans le frigo et qui passe à table : on vous propose des recettes de saison adaptées à tout le monde.</p>
   </header>
 
   <main>
     <section class="bloc" aria-labelledby="t-frigo">
-      <h2 id="t-frigo">1. Dans mon frigo</h2>
+      <h2 id="t-frigo">1. Dans mon frigo il y a....</h2>
+
+      <div class="autour">
+        <label for="autour-saisie" class="titre-champ">Je veux faire une recette autour de <span class="facultatif">(facultatif, 3 ingrédients maximum)</span></label>
+        <div class="saisie">
+          <input id="autour-saisie" type="text" list="liste-ingredients" placeholder="ex. potiron, puis Entrée" autocomplete="off">
+          <button type="button" id="autour-ajout" class="secondaire">Choisir</button>
+        </div>
+        <datalist id="liste-ingredients"></datalist>
+        <div id="autour-puces" class="puces-autour" aria-live="polite"></div>
+      </div>
+
+      <h3 class="titre-champ">Mes autres ingrédients</h3>
       <div class="saisie">
         <input id="ajout-ingredient" type="text" placeholder="ex. poireau, carottes, oeufs… puis Entrée" autocomplete="off" aria-label="Ajouter un ingrédient">
         <button type="button" id="bouton-ajout">Ajouter</button>
@@ -38,7 +51,7 @@
 
     <section class="bloc" aria-labelledby="t-options">
       <h2 id="t-options">3. Saison, type de plat et temps</h2>
-      <div class="ligne">
+      <div class="ligne options">
         <label>Saison<select id="saison"></select></label>
         <label>Type
           <select id="type">
@@ -46,6 +59,23 @@
             <option value="plat">🍲 Plats et soupes</option>
             <option value="entree">🥗 Entrées et accompagnements</option>
             <option value="dessert">🍰 Desserts</option>
+          </select>
+        </label>
+        <label>Occasion spéciale
+          <select id="occasion">
+            <option value="">✨ Aucune</option>
+            <option value="noel">🎄 Noël</option>
+            <option value="halloween">🎃 Halloween</option>
+            <option value="paques">🐣 Pâques</option>
+            <option value="anniversaire">🎂 Anniversaire</option>
+          </select>
+        </label>
+        <label>Qui cuisine
+          <select id="cuisinier">
+            <option value="adulte">🧑‍🍳 Adulte</option>
+            <option value="ado">🧑 Ado (12-18 ans)</option>
+            <option value="enfant">🧒 Enfant (6-12 ans)</option>
+            <option value="jeune">👶 Jeune enfant (1-6 ans)</option>
           </select>
         </label>
       </div>
@@ -77,17 +107,19 @@
             <option value="pertinence">Pertinence</option>
             <option value="rapide">Plus rapides d'abord</option>
             <option value="long">Plus longues d'abord</option>
+            <option value="note">⭐ Mieux notées d'abord</option>
           </select>
         </label>
       </div>
       <p id="resume" aria-live="polite"></p>
+      <p class="astuce">Touchez une tuile pour la retourner et découvrir la recette.</p>
       <div id="resultats" class="grille"></div>
       <button type="button" id="plus" class="secondaire" hidden>Voir plus de recettes</button>
-      <p class="appel"><span aria-hidden="true">💡</span> Une recette que vous aimez manque à l'appel ? <a href="#mes-recettes" id="lien-ajout">Ajoutez vos propres idées</a> pour enrichir la base.</p>
+      <p class="appel"><span aria-hidden="true">💡</span> Une recette que vous aimez manque à l'appel ? <a href="#mes-recettes" id="lien-ajout">Ajoutez votre grain de sel</a> pour enrichir la base.</p>
     </section>
 
     <section class="bloc" id="mes-recettes" aria-labelledby="t-mes-recettes">
-      <h2 id="t-mes-recettes">Vos idées de recettes</h2>
+      <h2 id="t-mes-recettes">J'ajoute mon grain de sel 🧂</h2>
       <p class="aide">Enrichissez la base avec vos propres recettes : elles sont proposées comme les autres dès que vous avez les ingrédients. Vous pouvez aussi importer un fichier de recettes exporté depuis Select &amp; Cook!, par exemple celui d'un proche.</p>
       <div class="actions-recettes">
         <button type="button" id="nouvelle-recette">+ Ajouter une recette</button>
@@ -101,14 +133,22 @@
     </section>
   </main>
 
+  <div id="modale" class="modale" hidden>
+    <div class="modale-fond" data-fermer></div>
+    <div class="modale-boite" role="dialog" aria-modal="true" aria-labelledby="modale-titre" tabindex="-1">
+      <button type="button" class="modale-fermer" data-fermer aria-label="Fermer la recette">×</button>
+      <div id="modale-contenu"></div>
+    </div>
+  </div>
+
   <footer>
     <p>Les régimes endométriose, low carb et microbiote suivent des repères alimentaires généraux et ne remplacent pas l'avis d'un médecin ou d'un diététicien. Allergies : vérifiez toujours les étiquettes des produits (bouillons, pâtes, sauces). Avant 6 mois, l'alimentation est uniquement lactée ; demandez conseil à votre pédiatre pour la diversification.</p>
     <p>Fait par Elsa. Photos des plats : Wikimedia Commons, sous licences libres (auteur et licence indiqués sur chaque photo).</p>
   </footer>
 
-  <script src="recettes.js?v=20261124d"></script>
-  <script src="categories.js?v=20261124d"></script>
-  <script src="photos.js?v=20261124d"></script>
-  <script src="app.js?v=20261124d"></script>
+  <script src="recettes.js?v=20261124f"></script>
+  <script src="categories.js?v=20261124f"></script>
+  <script src="photos.js?v=20261124f"></script>
+  <script src="app.js?v=20261124f"></script>
 </body>
 </html>
