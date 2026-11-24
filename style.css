@@ -191,3 +191,45 @@ button.principal { font-size: 1.05rem; font-weight: 600; padding: 12px 28px; bor
 .entete-resultats { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .entete-resultats h2 { margin: 0; font-size: 1.6rem; color: var(--accent); }
 .tri { flex-direction: row; align-items: center; gap: 8px; }
+
+/* Code couleur des titres : rose desserts, vert entrées, jaune plats */
+.titre-recette { padding: 10px 16px; display: flex; flex-direction: column; border-bottom: 1px solid rgba(0,0,0,.05); }
+.titre-recette h3 { margin: 0; font-size: 1.08rem; }
+.groupe-dessert .titre-recette { background: #fbd6e0; }
+.groupe-dessert .titre-recette h3 { color: #8e2a4b; }
+.groupe-entree .titre-recette { background: #d4ecd9; }
+.groupe-entree .titre-recette h3 { color: #1f5b3a; }
+.groupe-plat .titre-recette { background: #fde8a6; }
+.groupe-plat .titre-recette h3 { color: #6b4a00; }
+.titre-recette .meta { color: rgba(0,0,0,.55); }
+
+/* Photos des plats */
+.photo { margin: 0; position: relative; aspect-ratio: 4 / 3; background: #eee; overflow: hidden; }
+.photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.credit {
+  position: absolute; right: 0; bottom: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: .65rem; color: #fff; background: rgba(0,0,0,.45); padding: 2px 6px; border-top-left-radius: 6px; text-decoration: none;
+}
+.credit:hover { text-decoration: underline; }
+
+.badge.perso { background: #e8e1f7; color: #5b3e99; font-weight: 600; }
+.actions-carte { margin: 0; text-align: right; }
+
+/* Appel à contribution et vos recettes */
+.appel { background: #fff6e0; border: 1px dashed #e6c46a; border-radius: 10px; padding: 12px 14px; margin: 8px 0 0; }
+.appel a { color: var(--accent); font-weight: 600; }
+.actions-recettes { display: flex; gap: 8px; flex-wrap: wrap; }
+.message { min-height: 1.2em; font-size: .9rem; color: var(--accent); margin: 10px 0 0; }
+.message.erreur { color: var(--alerte); }
+.liste-recettes { list-style: none; padding: 0; margin: 10px 0 0; }
+.liste-recettes li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--bord); }
+.liste-recettes small { color: var(--doux); }
+.form-recette { border: 1px solid var(--accent); border-radius: 10px; padding: 16px; margin-top: 14px; background: #fbfdfb; }
+.form-recette h3 { margin: 0 0 12px; }
+.form-recette .large { flex: 3; min-width: 220px; }
+.form-recette textarea { font: inherit; font-size: .95rem; padding: 9px 11px; border: 1px solid var(--bord); border-radius: 8px; resize: vertical; color: var(--texte); }
+.deux-colonnes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 14px; }
+.indice { font-size: .75rem; color: var(--doux); }
+.apercu-photo img { max-width: 220px; border-radius: 8px; margin-top: 10px; display: block; }
+.pied-form { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+button:disabled { opacity: .5; cursor: default; }

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Select &amp; Cook! · Recettes de saison</title>
   <meta name="description" content="Des recettes de saison à partir de ce qu'il y a dans votre frigo, adaptées à l'âge et au régime de chaque convive.">
-  <link rel="stylesheet" href="style.css?v=20261124c">
+  <link rel="stylesheet" href="style.css?v=20261124d">
 </head>
 <body>
   <header class="entete">
@@ -83,16 +83,32 @@
       <p id="resume" aria-live="polite"></p>
       <div id="resultats" class="grille"></div>
       <button type="button" id="plus" class="secondaire" hidden>Voir plus de recettes</button>
+      <p class="appel"><span aria-hidden="true">💡</span> Une recette que vous aimez manque à l'appel ? <a href="#mes-recettes" id="lien-ajout">Ajoutez vos propres idées</a> pour enrichir la base.</p>
+    </section>
+
+    <section class="bloc" id="mes-recettes" aria-labelledby="t-mes-recettes">
+      <h2 id="t-mes-recettes">Vos idées de recettes</h2>
+      <p class="aide">Enrichissez la base avec vos propres recettes : elles sont proposées comme les autres dès que vous avez les ingrédients. Vous pouvez aussi importer un fichier de recettes exporté depuis Select &amp; Cook!, par exemple celui d'un proche.</p>
+      <div class="actions-recettes">
+        <button type="button" id="nouvelle-recette">+ Ajouter une recette</button>
+        <button type="button" id="bouton-importer" class="secondaire">Importer un fichier</button>
+        <input type="file" id="importer" accept=".json,application/json" hidden>
+        <button type="button" id="exporter" class="secondaire">Exporter mes recettes</button>
+      </div>
+      <p id="message-recettes" class="message" aria-live="polite"></p>
+      <div id="formulaire-recette"></div>
+      <ul id="liste-mes-recettes" class="liste-recettes"></ul>
     </section>
   </main>
 
   <footer>
     <p>Les régimes endométriose, low carb et microbiote suivent des repères alimentaires généraux et ne remplacent pas l'avis d'un médecin ou d'un diététicien. Allergies : vérifiez toujours les étiquettes des produits (bouillons, pâtes, sauces). Avant 6 mois, l'alimentation est uniquement lactée ; demandez conseil à votre pédiatre pour la diversification.</p>
-    <p>Fait par Elsa.</p>
+    <p>Fait par Elsa. Photos des plats : Wikimedia Commons, sous licences libres (auteur et licence indiqués sur chaque photo).</p>
   </footer>
 
-  <script src="recettes.js?v=20261124c"></script>
-  <script src="categories.js?v=20261124c"></script>
-  <script src="app.js?v=20261124c"></script>
+  <script src="recettes.js?v=20261124d"></script>
+  <script src="categories.js?v=20261124d"></script>
+  <script src="photos.js?v=20261124d"></script>
+  <script src="app.js?v=20261124d"></script>
 </body>
 </html>

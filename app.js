@@ -221,6 +221,63 @@ function classer(nom) {
   return res;
 }
 
+// Déduit régime, allergènes et porc à partir des ingrédients (pour les recettes ajoutées par l'utilisateur).
+const MOTS_GLUTEN = ["farine", "pates", "pain", "semoule", "boulgour", "pate brisee", "pate feuilletee", "chapelure", "biscuit", "ble", "orge", "seigle", "couscous", "nouille", "spaghetti"];
+const MOTS_LACTOSE = ["lait", "beurre", "creme", "creme fraiche", "fromage", "fromage rape", "parmesan", "mozzarella", "feta", "roquefort", "reblochon", "fromage de chevre", "yaourt", "gruyere", "emmental", "comte", "ricotta", "mascarpone"];
+const MOTS_FRUITS_COQUE = ["noix", "noisette", "amande", "pignons de pin", "pistache", "noix de cajou"];
+const MOTS_PORC = ["jambon", "jambon cru", "lardons", "poitrine fumee", "saucisse", "chorizo", "porc", "bacon"];
+function detecter(noms) {
+  const c = noms.map(canonique);
+  // Un mot compte aussi au milieu du nom (« tranches de pain »), sauf s'il est suivi de « de » (« lait de coco »).
+  const contientMot = (n, m) => { const mots = n.split(" "), k = mots.indexOf(m); return k >= 0 && !["de", "d"].includes(mots[k + 1]); };
+  const a = liste => c.some(n => liste.some(m => correspond(n, normaliser(m)) || (!normaliser(m).includes(" ") && contientMot(n, normaliser(m)))));
+  const cats = noms.map(n => classer(n).categorie);
+  const regime = cats.includes("viandes") ? "viande" : cats.includes("poissons") ? "poisson"
+    : (cats.includes("cremerie") || a(["miel"])) ? "vege" : "vegan";
+  const allergenes = [];
+  if (a(MOTS_GLUTEN)) allergenes.push("gluten");
+  if (a(MOTS_LACTOSE)) allergenes.push("lactose");
+  if (a(["oeuf"])) allergenes.push("oeuf");
+  if (a(MOTS_FRUITS_COQUE)) allergenes.push("fruits à coque");
+  return { regime, allergenes, porc: a(MOTS_PORC), miel: a(["miel"]) };
+}
+
+// Lit une ligne d'ingrédient : « poireau : 3 », « 200 g de farine » ou « sel ».
+function lireIngredient(ligne) {
+  const t = ligne.trim().replace(/^[-•*]\s*/, "");
+  if (!t) return null;
+  if (t.includes(":")) { const [nom, ...q] = t.split(":"); return { nom: nom.trim(), qte: q.join(":").trim() }; }
+  const m = t.match(/^(\d+(?:[.,]\d+)?(?:\/\d+)?\s*(?:kg|g|mg|cl|ml|dl|l|c\. ?à ?(?:soupe|café)|cuill[eè]res? à (?:soupe|café)|pinc[ée]es?|tranches?|gousses?|bottes?|bouquets?|filets?|pavés?|boîtes?|sachets?|verres?|tasses?)?)\s+(?:de |d'|d’)?(.+)$/i);
+  if (m) return { nom: m[2].trim(), qte: m[1].trim() };
+  return { nom: t, qte: "" };
+}
+
+// Vérifie une recette importée ou saisie et la remet au format du site.
+function normaliserRecette(r) {
+  if (!r || typeof r !== "object") return null;
+  const nom = String(r.nom || "").trim().slice(0, 120);
+  const ingr = (Array.isArray(r.ingr) ? r.ingr : []).map(String).map(l => l.trim()).filter(Boolean).slice(0, 60);
+  const etapes = (Array.isArray(r.etapes) ? r.etapes : []).map(String).map(e => e.trim()).filter(Boolean).slice(0, 40);
+  const temps = Math.round(Number(r.temps));
+  if (!nom || !ingr.length || !etapes.length || !(temps > 0)) return null;
+  const types = ["plat", "soupe", "entrée", "accompagnement", "dessert"];
+  const saisons = (Array.isArray(r.saisons) ? r.saisons : []).filter(x => SAISONS.includes(x));
+  const auto = detecter(ingr.map(nomIngredient));
+  return {
+    id: typeof r.id === "string" && r.id ? r.id : "m" + Math.random().toString(36).slice(2, 10),
+    perso: true, nom, ingr, etapes, temps: Math.min(temps, 24 * 60),
+    type: types.includes(r.type) ? r.type : "plat",
+    saisons: saisons.length ? saisons : [...SAISONS],
+    regime: ["vegan", "vege", "poisson", "viande"].includes(r.regime) ? r.regime : auto.regime,
+    allergenes: [...new Set([...(Array.isArray(r.allergenes) ? r.allergenes : []), ...auto.allergenes])].filter(x => ["gluten", "lactose", "oeuf", "fruits à coque"].includes(x)),
+    porc: !!r.porc || auto.porc,
+    epice: !!r.epice, enfants: r.enfants !== false, tendre: !!r.tendre,
+    alertes: auto.miel ? ["miel"] : [],
+    personnes: Math.max(1, Math.min(50, Math.round(Number(r.personnes)) || 4)),
+    photo: typeof r.photo === "string" && /^data:image\/(jpeg|png|webp);base64,/.test(r.photo) ? r.photo : "",
+  };
+}
+
 // Ingrédients qui manquent pour les recettes les plus proches, classés par nombre de recettes qu'ils débloquent.
 function ingredientsManquants(options, limite = 40) {
   const { resultats } = proposer({ ...options, tri: "pertinence", complet: false });
@@ -246,16 +303,16 @@ function ingredientsManquants(options, limite = 40) {
     .slice(0, limite);
 }
 
-function ajusterQuantite(qte, personnes, nom = "") {
+function ajusterQuantite(qte, personnes, nom = "", base = 4) {
   const m = qte.match(/^(\d+(?:,\d+)?)(?:\/(\d+))?(.*)$/);
-  if (!m || personnes === 4) return qte;
+  if (!m || personnes === base) return qte;
   if (/p[aâ]te bris|^poulet$/.test(nom) || /entier/.test(qte)) return qte; // une tarte ou un poulet ne se coupe pas
   if (!m[3].trim()) { // ingrédients comptés à l'unité : on arrondit au supérieur
-    const n = parseFloat(m[1].replace(",", ".")) / (m[2] ? Number(m[2]) : 1) * personnes / 4;
+    const n = parseFloat(m[1].replace(",", ".")) / (m[2] ? Number(m[2]) : 1) * personnes / base;
     return String(Math.max(1, Math.ceil(n - 0.01)));
   }
   let v = parseFloat(m[1].replace(",", ".")) / (m[2] ? Number(m[2]) : 1);
-  v = v * personnes / 4;
+  v = v * personnes / base;
   const reste = m[3];
   let txt;
   if (v >= 100) txt = String(Math.round(v / 10) * 10);
@@ -270,7 +327,7 @@ function ajusterQuantite(qte, personnes, nom = "") {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { normaliser, canonique, correspond, incompatibilite, proposer, ajusterQuantite, saisonDuMois, conseils, profilRecette, classer, ingredientsManquants };
+  module.exports = { normaliser, canonique, correspond, incompatibilite, proposer, ajusterQuantite, saisonDuMois, conseils, profilRecette, classer, ingredientsManquants, detecter, lireIngredient, normaliserRecette };
 }
 
 // ============ Interface ============
@@ -282,7 +339,7 @@ if (typeof document !== "undefined") {
   function charger() { try { return JSON.parse(localStorage.getItem(CLE)); } catch (e) { return null; } }
   function sauver() {
     const { edition, aSupprimer, ...aGarder } = etat;
-    try { localStorage.setItem(CLE, JSON.stringify(aGarder)); } catch (e) { /* stockage indisponible */ }
+    try { localStorage.setItem(CLE, JSON.stringify(aGarder)); return true; } catch (e) { return false; }
   }
 
   const etat = charger() || {
@@ -299,6 +356,8 @@ if (typeof document !== "undefined") {
   if (!etat.connus) etat.connus = [...etat.frigo];
   if (!etat.tri) etat.tri = "pertinence";
   if (!etat.tempsMax) etat.tempsMax = 0;
+  etat.mesRecettes = (Array.isArray(etat.mesRecettes) ? etat.mesRecettes : []).map(normaliserRecette).filter(Boolean);
+  const toutesRecettes = () => [...RECETTES, ...etat.mesRecettes];
   etat.saison = etat.saisonManuelle ? etat.saison : saisonDuMois(new Date().getMonth() + 1);
   etat.edition = null; etat.aSupprimer = null;
   let affichees = 12;
@@ -482,7 +541,7 @@ if (typeof document !== "undefined") {
   $("#plus").addEventListener("click", () => { affichees += 10; rendreResultats(); });
 
   // --- Étape « Avez-vous aussi… ? » ---
-  const optionsRecherche = () => ({ recettes: RECETTES, frigo: etat.frigo, avecPlacard: etat.placard, profils: convives(), saison: etat.saison, type: etat.type, tempsMax: etat.tempsMax, tri: etat.tri });
+  const optionsRecherche = () => ({ recettes: toutesRecettes(), frigo: etat.frigo, avecPlacard: etat.placard, profils: convives(), saison: etat.saison, type: etat.type, tempsMax: etat.tempsMax, tri: etat.tri });
   if (!etat.etape) etat.etape = "saisie";
   if (!etat.question) etat.question = [];
 
@@ -555,6 +614,7 @@ if (typeof document !== "undefined") {
   function carte(x, n, table) {
     const r = x.recette;
     const badges = [
+      r.perso ? `<span class="badge perso">Ma recette</span>` : "",
       x.deSaison ? `<span class="badge saison">De saison</span>` : `<span class="badge hors">Hors saison</span>`,
       `<span class="badge">${ETIQ_REGIME[r.regime]}</span>`,
       r.allergenes.includes("gluten") ? "" : `<span class="badge">Sans gluten</span>`,
@@ -565,19 +625,21 @@ if (typeof document !== "undefined") {
     ].join("");
     const avis = conseils(r, table);
     const duree = r.temps >= 60 ? `${Math.floor(r.temps / 60)} h${r.temps % 60 ? String(r.temps % 60).padStart(2, "0") : ""}` : `${r.temps} min`;
-    return `<article class="recette">
+    const groupe = r.type === "dessert" ? "dessert" : (r.type === "entrée" || r.type === "accompagnement") ? "entree" : "plat";
+    return `<article class="recette groupe-${groupe}">
       ${visuel(r)}
+      <header class="titre-recette"><h3>${esc(r.nom)}</h3><span class="meta">${esc(r.type)}</span></header>
       <div class="corps">
-      <header><h3>${esc(r.nom)}</h3><span class="meta">${esc(r.type)}</span></header>
       <p class="temps"><span aria-hidden="true">⏱</span> ${duree} <span>(préparation + cuisson)</span></p>
       <div class="badges">${badges}</div>
       <p class="complet">Vous avez tous les ingrédients${x.utilises ? ` · utilise ${x.utilises} produit${x.utilises > 1 ? "s" : ""} de votre frigo` : ""}</p>
       ${avis.length ? `<ul class="avis">${avis.map(a => `<li>${esc(a)}</li>`).join("")}</ul>` : ""}
       <details><summary>Voir la recette</summary>
-        <ul class="ingr">${x.lignes.map(l => `<li class="${l.frigo ? "ok" : l.base ? "base" : ""}">${esc(nomIngredient(l.ligne))}${qteIngredient(l.ligne) ? ` — ${esc(ajusterQuantite(qteIngredient(l.ligne), n, nomIngredient(l.ligne)))}` : ""}</li>`).join("")}</ul>
+        <ul class="ingr">${x.lignes.map(l => `<li class="${l.frigo ? "ok" : l.base ? "base" : ""}">${esc(nomIngredient(l.ligne))}${qteIngredient(l.ligne) ? ` — ${esc(ajusterQuantite(qteIngredient(l.ligne), n, nomIngredient(l.ligne), r.personnes || 4))}` : ""}</li>`).join("")}</ul>
         <p class="note">+ sel, poivre, huile et eau.</p>
         <ol>${r.etapes.map(e => `<li>${esc(e)}</li>`).join("")}</ol>
       </details>
+      ${r.perso ? `<p class="actions-carte"><button type="button" class="lien" data-modifier-recette="${r.id}">Modifier</button></p>` : ""}
       </div>
     </article>`;
   }
@@ -585,6 +647,12 @@ if (typeof document !== "undefined") {
   // Visuel illustré : couleur selon le type de plat, pictogrammes des ingrédients principaux.
   const BASIQUES = new Set(["ail", "oignon", "echalote", "bouillon de legume", "huile", "vinaigre", "moutarde", "sucre", "farine", "beurre", "curry", "cumin", "cannelle", "thym", "vanille"]);
   function visuel(r) {
+    const photo = r.photo ? { src: r.photo } : (typeof PHOTOS !== "undefined" && PHOTOS[r.nom]);
+    if (photo) {
+      const credit = photo.auteur
+        ? `<a class="credit" href="${esc(photo.page)}" target="_blank" rel="noopener">Photo : ${esc(photo.auteur)} · ${esc(photo.licence)}</a>` : "";
+      return `<figure class="photo"><img src="${esc(photo.src)}" alt="${esc(r.nom)}" loading="lazy">${credit}</figure>`;
+    }
     const vus = new Set(), icones = [];
     const principaux = r.ingr.map(nomIngredient).filter(n => !BASIQUES.has(canonique(n)));
     const ajouter = noms => { for (const nom of noms) { const e = classer(nom).emoji; if (!vus.has(e) && icones.length < 4) { vus.add(e); icones.push(e); } } };
@@ -596,6 +664,181 @@ if (typeof document !== "undefined") {
       <span class="visuel-ingr" aria-hidden="true">${icones.join("")}</span>
     </div>`;
   }
+
+  // --- Vos idées de recettes : ajout, modification, import et export (gardées dans le navigateur) ---
+  const NOMS_TYPES = [["plat", "🍽️ Plat"], ["soupe", "🍲 Soupe"], ["entrée", "🥗 Entrée"], ["accompagnement", "🥘 Accompagnement"], ["dessert", "🍰 Dessert"]];
+  const NOMS_REGIMES_RECETTE = [["auto", "Détecté automatiquement"], ["vegan", "Vegan"], ["vege", "Végétarien"], ["poisson", "Avec poisson"], ["viande", "Avec viande"]];
+  let brouillonPhoto = null; // photo en cours dans le formulaire
+
+  function message(texte, erreur = false) {
+    const m = $("#message-recettes"); m.textContent = texte; m.classList.toggle("erreur", erreur);
+  }
+
+  function formulaireRecette(r) {
+    const v = r || { nom: "", type: "plat", temps: "", personnes: 4, saisons: [], ingr: [], etapes: [], allergenes: [], porc: false, epice: false, tendre: false, regime: "auto" };
+    const lignes = v.ingr.map(l => qteIngredient(l) ? `${nomIngredient(l)} : ${qteIngredient(l)}` : nomIngredient(l)).join("\n");
+    brouillonPhoto = r ? (r.photo || null) : null;
+    return `<form id="form-recette" class="form-recette" novalidate data-id="${r ? r.id : ""}">
+      <h3>${r ? "Modifier la recette" : "Nouvelle recette"}</h3>
+      <div class="ligne">
+        <label class="large">Nom de la recette<input name="nom" required maxlength="120" value="${esc(v.nom)}" placeholder="ex. Gratin de courgettes de mamie"></label>
+        <label>Type<select name="type">${NOMS_TYPES.map(([k, l]) => `<option value="${k}"${v.type === k ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+        <label class="petit">Temps (min)<input name="temps" type="number" min="1" max="1440" required value="${esc(v.temps)}" placeholder="45"></label>
+        <label class="petit">Pour (pers.)<input name="personnes" type="number" min="1" max="50" value="${esc(v.personnes || 4)}"></label>
+      </div>
+      <p class="sous-titre">Saisons <span>(rien coché = toute l'année)</span></p>
+      <div class="allergies">${SAISONS.map(x => `<label class="case"><input type="checkbox" name="saisons" value="${x}"${r && v.saisons.length < 4 && v.saisons.includes(x) ? " checked" : ""}> ${ICONES_SAISON[x]} ${NOMS_SAISONS[x]}</label>`).join("")}</div>
+      <div class="deux-colonnes">
+        <label>Ingrédients <span class="indice">un par ligne, ex. « poireau : 3 » ou « 200 g de farine »</span>
+          <textarea name="ingr" rows="8" required placeholder="poireau : 3\n200 g de farine\n20 cl de crème fraîche\noeuf : 2">${esc(lignes)}</textarea></label>
+        <label>Étapes <span class="indice">une par ligne</span>
+          <textarea name="etapes" rows="8" required placeholder="Émincer les poireaux.\nLes faire fondre 15 min au beurre.\n…">${esc(v.etapes.join("\n"))}</textarea></label>
+      </div>
+      <div class="ligne">
+        <label>Régime<select name="regime">${NOMS_REGIMES_RECETTE.map(([k, l]) => `<option value="${k}"${(r ? v.regime : "auto") === k ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+        <label>Photo du plat (facultatif)<input name="photo" type="file" accept="image/*"></label>
+      </div>
+      <p class="sous-titre">Contient <span>(détecté d'après les ingrédients, complétez si besoin)</span></p>
+      <div class="allergies">
+        ${[["gluten", "Gluten"], ["lactose", "Lactose"], ["oeuf", "Œuf"], ["fruits à coque", "Fruits à coque"]].map(([k, l]) => `<label class="case"><input type="checkbox" name="allergenes" value="${k}"${v.allergenes.includes(k) ? " checked" : ""}> ${l}</label>`).join("")}
+        <label class="case"><input type="checkbox" name="porc"${v.porc ? " checked" : ""}> Porc</label>
+        <label class="case"><input type="checkbox" name="epice"${v.epice ? " checked" : ""}> Épicé</label>
+        <label class="case"><input type="checkbox" name="tendre"${v.tendre ? " checked" : ""}> Texture fondante (tout-petits, seniors)</label>
+      </div>
+      <div id="apercu-photo" class="apercu-photo">${brouillonPhoto ? `<img src="${brouillonPhoto}" alt="Photo choisie">` : ""}</div>
+      <p class="message erreur" id="erreur-recette" aria-live="polite"></p>
+      <div class="pied-form">
+        ${r ? `<button type="button" class="lien danger" id="supprimer-recette">Supprimer cette recette</button>` : "<span></span>"}
+        <span><button type="button" class="secondaire" id="annuler-recette">Annuler</button> <button type="submit">Enregistrer la recette</button></span>
+      </div>
+    </form>`;
+  }
+
+  function ouvrirFormulaire(r) {
+    $("#formulaire-recette").innerHTML = formulaireRecette(r);
+    message("");
+    $("#mes-recettes").scrollIntoView({ behavior: "smooth", block: "start" });
+    $('#form-recette [name="nom"]').focus();
+  }
+  function fermerFormulaire() { $("#formulaire-recette").innerHTML = ""; brouillonPhoto = null; }
+
+  function rendreMesRecettes() {
+    const liste = etat.mesRecettes;
+    $("#liste-mes-recettes").innerHTML = liste.map(r => `<li>
+      <span><strong>${esc(r.nom)}</strong> <small>${esc(r.type)} · ${r.temps} min · ${r.ingr.length} ingrédients</small></span>
+      <button type="button" class="lien" data-modifier-recette="${r.id}">Modifier</button></li>`).join("");
+    $("#exporter").disabled = !liste.length;
+  }
+
+  // Coche automatiquement les allergènes détectés quand on tape les ingrédients.
+  $("#formulaire-recette").addEventListener("input", e => {
+    if (e.target.name !== "ingr") return;
+    const noms = e.target.value.split("\n").map(lireIngredient).filter(Boolean).map(x => x.nom);
+    const d = detecter(noms);
+    d.allergenes.forEach(a => { const c = document.querySelector(`#form-recette [name="allergenes"][value="${a}"]`); if (c) c.checked = true; });
+    if (d.porc) document.querySelector('#form-recette [name="porc"]').checked = true;
+  });
+
+  // Photo : redimensionnée à 600 px de large pour rester légère dans le navigateur.
+  $("#formulaire-recette").addEventListener("change", e => {
+    if (e.target.name !== "photo" || !e.target.files[0]) return;
+    const fichier = e.target.files[0];
+    if (!fichier.type.startsWith("image/")) return;
+    const lecteur = new FileReader();
+    lecteur.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const l = Math.min(600, img.width), h = Math.round(img.height * l / img.width);
+        const c = document.createElement("canvas"); c.width = l; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, l, h);
+        brouillonPhoto = c.toDataURL("image/jpeg", 0.8);
+        $("#apercu-photo").innerHTML = `<img src="${brouillonPhoto}" alt="Photo choisie"> <button type="button" class="lien" id="retirer-photo">Retirer la photo</button>`;
+      };
+      img.src = lecteur.result;
+    };
+    lecteur.readAsDataURL(fichier);
+  });
+
+  $("#formulaire-recette").addEventListener("click", e => {
+    if (e.target.id === "annuler-recette") fermerFormulaire();
+    if (e.target.id === "retirer-photo") { brouillonPhoto = null; $("#apercu-photo").innerHTML = ""; }
+    if (e.target.id === "supprimer-recette") {
+      if (e.target.dataset.confirme) {
+        const id = $("#form-recette").dataset.id;
+        etat.mesRecettes = etat.mesRecettes.filter(r => r.id !== id);
+        fermerFormulaire(); rendreMesRecettes(); maj(); message("Recette supprimée.");
+      } else { e.target.dataset.confirme = "1"; e.target.textContent = "Confirmer la suppression"; }
+    }
+  });
+
+  $("#formulaire-recette").addEventListener("submit", e => {
+    e.preventDefault();
+    const f = e.target, val = n => f.elements[n].value;
+    const ingr = val("ingr").split("\n").map(lireIngredient).filter(Boolean).map(x => x.qte ? `${x.nom}|${x.qte}` : x.nom);
+    const etapes = val("etapes").split("\n").map(x => x.trim()).filter(Boolean);
+    const erreurs = [];
+    if (!val("nom").trim()) erreurs.push("le nom");
+    if (!(Number(val("temps")) > 0)) erreurs.push("le temps");
+    if (!ingr.length) erreurs.push("au moins un ingrédient");
+    if (!etapes.length) erreurs.push("au moins une étape");
+    if (erreurs.length) { $("#erreur-recette").textContent = "Il manque " + erreurs.join(", ") + "."; return; }
+    const coches = n => [...f.querySelectorAll(`[name="${n}"]:checked`)].map(c => c.value);
+    const brut = {
+      id: f.dataset.id || undefined, nom: val("nom"), type: val("type"), temps: val("temps"), personnes: val("personnes"),
+      saisons: coches("saisons"), ingr, etapes, allergenes: coches("allergenes"),
+      regime: val("regime") === "auto" ? undefined : val("regime"),
+      porc: f.elements.porc.checked, epice: f.elements.epice.checked, tendre: f.elements.tendre.checked, photo: brouillonPhoto || "",
+    };
+    const r = normaliserRecette(brut);
+    if (!r) { $("#erreur-recette").textContent = "La recette n'a pas pu être enregistrée."; return; }
+    const i = etat.mesRecettes.findIndex(x => x.id === r.id);
+    if (i >= 0) etat.mesRecettes[i] = r; else etat.mesRecettes.push(r);
+    if (!sauver()) {
+      if (i >= 0) etat.mesRecettes[i] = { ...r, photo: "" }; else etat.mesRecettes[etat.mesRecettes.length - 1].photo = "";
+      sauver();
+      message("Recette enregistrée, mais sans la photo : la mémoire du navigateur est pleine.", true);
+    } else message(`« ${r.nom} » est enregistrée et sera proposée dès que vous aurez ses ingrédients.`);
+    fermerFormulaire(); rendreMesRecettes(); maj();
+  });
+
+  $("#nouvelle-recette").addEventListener("click", () => ouvrirFormulaire(null));
+  document.addEventListener("click", e => {
+    const id = e.target.dataset && e.target.dataset.modifierRecette;
+    if (id) ouvrirFormulaire(etat.mesRecettes.find(r => r.id === id));
+  });
+
+  $("#exporter").addEventListener("click", () => {
+    const donnees = { format: "select-and-cook", version: 1, recettes: etat.mesRecettes.map(({ perso, ...r }) => r) };
+    const lien = document.createElement("a");
+    lien.href = URL.createObjectURL(new Blob([JSON.stringify(donnees, null, 2)], { type: "application/json" }));
+    lien.download = "mes-recettes-select-and-cook.json";
+    document.body.appendChild(lien); lien.click(); lien.remove();
+    message(`${etat.mesRecettes.length} recette${etat.mesRecettes.length > 1 ? "s" : ""} exportée${etat.mesRecettes.length > 1 ? "s" : ""}. Vous pouvez envoyer ce fichier à un proche pour qu'il l'importe.`);
+  });
+
+  $("#bouton-importer").addEventListener("click", () => $("#importer").click());
+  $("#importer").addEventListener("change", e => {
+    const fichier = e.target.files[0]; if (!fichier) return;
+    const lecteur = new FileReader();
+    lecteur.onload = () => {
+      let donnees;
+      try { donnees = JSON.parse(lecteur.result); } catch (err) { message("Ce fichier n'est pas un fichier de recettes Select & Cook!.", true); return; }
+      const brutes = Array.isArray(donnees) ? donnees : Array.isArray(donnees.recettes) ? donnees.recettes : [];
+      const existants = new Set(toutesRecettes().map(r => normaliser(r.nom)));
+      let ajoutees = 0, ignorees = 0;
+      for (const b of brutes) {
+        const r = normaliserRecette({ ...b, id: undefined });
+        if (!r || existants.has(normaliser(r.nom))) { ignorees++; continue; }
+        etat.mesRecettes.push(r); existants.add(normaliser(r.nom)); ajoutees++;
+      }
+      sauver(); rendreMesRecettes(); maj();
+      message(ajoutees
+        ? `${ajoutees} recette${ajoutees > 1 ? "s" : ""} importée${ajoutees > 1 ? "s" : ""}${ignorees ? ` (${ignorees} ignorée${ignorees > 1 ? "s" : ""} : déjà présentes ou incomplètes)` : ""}.`
+        : "Aucune nouvelle recette dans ce fichier (déjà présentes ou incomplètes).", !ajoutees);
+      e.target.value = "";
+    };
+    lecteur.readAsText(fichier);
+  });
 
   let minuteur;
   function maj() {
@@ -609,5 +852,5 @@ if (typeof document !== "undefined") {
   $("#temps-max-valeur").textContent = libelleTemps(etat.tempsMax || PAS_DE_LIMITE);
   $("#temps-max").setAttribute("aria-valuetext", libelleTemps(etat.tempsMax || PAS_DE_LIMITE));
   $("#tri").value = etat.tri;
-  rendreFrigo(); rendreProfils(); rendreEtapes(); rendreResultats(); sauver();
+  rendreFrigo(); rendreProfils(); rendreEtapes(); rendreResultats(); rendreMesRecettes(); sauver();
 }
