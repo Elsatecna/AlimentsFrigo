@@ -1,6 +1,7 @@
 // ============ Logique (testable sans navigateur) ============
 
 const SAISONS = ["printemps", "été", "automne", "hiver"];
+const ICONES_SAISON = { "printemps": "🌸", "été": "☀️", "automne": "🍂", "hiver": "❄️" };
 const NOMS_SAISONS = { "printemps": "Printemps", "été": "Été", "automne": "Automne", "hiver": "Hiver" };
 
 const PLACARD = ["ail", "oignon", "échalote", "farine", "sucre", "beurre", "huile", "moutarde", "vinaigre",
@@ -599,7 +600,7 @@ if (typeof document !== "undefined") {
     clearTimeout(minuteur); minuteur = setTimeout(rendreResultats, 120);
   }
 
-  $("#saison").innerHTML = SAISONS.map(s => `<option value="${s}"${s === etat.saison ? " selected" : ""}>${NOMS_SAISONS[s]}</option>`).join("");
+  $("#saison").innerHTML = SAISONS.map(s => `<option value="${s}"${s === etat.saison ? " selected" : ""}>${ICONES_SAISON[s]} ${NOMS_SAISONS[s]}</option>`).join("");
   $("#type").value = etat.type || "tout";
   $("#temps-max").value = String(etat.tempsMax || PAS_DE_LIMITE);
   $("#temps-max-valeur").textContent = libelleTemps(etat.tempsMax || PAS_DE_LIMITE);
