@@ -461,7 +461,19 @@ if (typeof document !== "undefined") {
   // --- Options ---
   $("#saison").addEventListener("change", e => { etat.saison = e.target.value; etat.saisonManuelle = true; maj(); });
   $("#type").addEventListener("change", e => { etat.type = e.target.value; maj(); });
-  $("#temps-max").addEventListener("change", e => { etat.tempsMax = Number(e.target.value); maj(); });
+  // Curseur : la dernière position (125) veut dire « peu importe » (pas de limite).
+  const PAS_DE_LIMITE = 125;
+  function libelleTemps(v) {
+    if (v >= PAS_DE_LIMITE) return "peu importe";
+    return v >= 60 ? `${Math.floor(v / 60)} h${v % 60 ? String(v % 60).padStart(2, "0") : ""}` : `${v} min`;
+  }
+  $("#temps-max").addEventListener("input", e => {
+    const v = Number(e.target.value);
+    etat.tempsMax = v >= PAS_DE_LIMITE ? 0 : v;
+    $("#temps-max-valeur").textContent = libelleTemps(v);
+    e.target.setAttribute("aria-valuetext", libelleTemps(v));
+    maj();
+  });
   $("#tri").addEventListener("change", e => { etat.tri = e.target.value; maj(); });
   $("#plus").addEventListener("click", () => { affichees += 10; rendreResultats(); });
 
@@ -589,7 +601,9 @@ if (typeof document !== "undefined") {
 
   $("#saison").innerHTML = SAISONS.map(s => `<option value="${s}"${s === etat.saison ? " selected" : ""}>${NOMS_SAISONS[s]}</option>`).join("");
   $("#type").value = etat.type || "tout";
-  $("#temps-max").value = String(etat.tempsMax);
+  $("#temps-max").value = String(etat.tempsMax || PAS_DE_LIMITE);
+  $("#temps-max-valeur").textContent = libelleTemps(etat.tempsMax || PAS_DE_LIMITE);
+  $("#temps-max").setAttribute("aria-valuetext", libelleTemps(etat.tempsMax || PAS_DE_LIMITE));
   $("#tri").value = etat.tri;
   rendreFrigo(); rendreProfils(); rendreEtapes(); rendreResultats(); sauver();
 }

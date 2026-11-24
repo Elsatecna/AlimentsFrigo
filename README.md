@@ -1,4 +1,4 @@
-# Aliments Frigo
+# Select & Cook!
 
 Site qui propose des recettes de saison à partir des ingrédients du frigo et des profils des convives (âge, régime, régimes à choix multiple dont endométriose, low carb et microbiote, allergies, aliments non aimés).
 

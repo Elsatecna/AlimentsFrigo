@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aliments Frigo · Recettes de saison</title>
+  <title>Select &amp; Cook! · Recettes de saison</title>
   <meta name="description" content="Des recettes de saison à partir de ce qu'il y a dans votre frigo, adaptées à l'âge et au régime de chaque convive.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="entete">
-    <h1>Aliments Frigo</h1>
+    <h1>Select &amp; Cook!</h1>
     <p>Dites ce qu'il y a dans le frigo et qui passe à table : on vous propose des recettes de saison adaptées à tout le monde.</p>
   </header>
 
@@ -48,23 +48,11 @@
             <option value="dessert">Desserts</option>
           </select>
         </label>
-        <label>Temps maximum
-          <select id="temps-max">
-            <option value="0">Peu importe</option>
-            <option value="15">15 min</option>
-            <option value="30">30 min</option>
-            <option value="45">45 min</option>
-            <option value="60">1 h</option>
-            <option value="90">1 h 30</option>
-          </select>
-        </label>
-        <label>Trier par
-          <select id="tri">
-            <option value="pertinence">Pertinence</option>
-            <option value="rapide">Plus rapides d'abord</option>
-            <option value="long">Plus longues d'abord</option>
-          </select>
-        </label>
+      </div>
+      <div class="curseur">
+        <label for="temps-max">Temps maximum (préparation + cuisson) : <strong id="temps-max-valeur">peu importe</strong></label>
+        <input type="range" id="temps-max" min="10" max="125" step="5" value="125" aria-describedby="temps-max-valeur">
+        <div class="graduations" aria-hidden="true"><span style="left:0.0%">10 min</span><span style="left:17.39%">30 min</span><span style="left:43.48%">1 h</span><span style="left:69.57%">1 h 30</span><span style="left:100.0%">Peu importe</span></div>
       </div>
     </section>
 
@@ -82,7 +70,16 @@
     </section>
 
     <section aria-labelledby="t-resultats" class="zone-resultats" id="zone-resultats" hidden>
-      <h2 id="t-resultats">Recettes réalisables avec ce que vous avez</h2>
+      <div class="entete-resultats">
+        <h2 id="t-resultats">A taaaaaable!</h2>
+        <label class="tri">Trier par
+          <select id="tri">
+            <option value="pertinence">Pertinence</option>
+            <option value="rapide">Plus rapides d'abord</option>
+            <option value="long">Plus longues d'abord</option>
+          </select>
+        </label>
+      </div>
       <p id="resume" aria-live="polite"></p>
       <div id="resultats" class="grille"></div>
       <button type="button" id="plus" class="secondaire" hidden>Voir plus de recettes</button>

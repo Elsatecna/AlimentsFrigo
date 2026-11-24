@@ -179,3 +179,18 @@ button.principal { font-size: 1.05rem; font-weight: 600; padding: 12px 28px; bor
 .visuel-entree { background: linear-gradient(135deg, #eef5d9, #d6e9a8); }
 .visuel-dessert { background: linear-gradient(135deg, #fbe1e6, #f3bfca); }
 .visuel-accompagnement { background: linear-gradient(135deg, #fcf1cf, #f2dc93); }
+
+/* Curseur du temps maximum */
+.curseur { margin-top: 16px; }
+.curseur label { color: var(--texte); font-size: .9rem; }
+.curseur strong { color: var(--accent); }
+.curseur input[type="range"] { width: 100%; margin: 10px 0 2px; accent-color: var(--accent); cursor: pointer; }
+.graduations { position: relative; height: 1.2em; margin: 0 8px; font-size: .75rem; color: var(--doux); }
+.graduations span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.graduations span:first-child { transform: none; }
+.graduations span:last-child { transform: translateX(-100%); }
+
+/* En-tête des résultats avec le tri */
+.entete-resultats { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.entete-resultats h2 { margin: 0; font-size: 1.6rem; color: var(--accent); }
+.tri { flex-direction: row; align-items: center; gap: 8px; }
