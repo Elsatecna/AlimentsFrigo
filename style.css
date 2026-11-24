@@ -505,3 +505,10 @@ footer { border-top-color: var(--bord); }
 .grande .photo { background: var(--bois-clair); }
 .grande .photo .photo-fond { display: block; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(24px) saturate(1.1); transform: scale(1.15); opacity: .75; }
 .grande .photo .photo-plat { position: relative; width: auto; max-width: 100%; height: 100%; margin: 0 auto; object-fit: contain; }
+
+/* Fond de page dans la palette Scandi Fresh : bois clair #E8DCC8 */
+:root { --fond: #E8DCC8; --doux: #5C625D; }
+body { background: var(--fond); }
+html { background: var(--fond); }
+.ligne-ing:hover { background: #F4EEE4; }
+.appel { background: #FFFFFF; box-shadow: var(--ombre); }
