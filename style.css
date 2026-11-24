@@ -371,3 +371,4 @@ body.modale-ouverte { overflow: hidden; }
 .tuile.retournee .recto { pointer-events: none; }
 .tuile .credit { max-width: 72%; }
 @media (max-width: 520px) { .tuile { height: 350px; } .recto .photo, .recto .visuel { height: 200px; } }
+.titre-carnet { margin-top: 18px; }

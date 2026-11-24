@@ -878,7 +878,7 @@ if (typeof document !== "undefined") {
     </div>`;
   }
 
-  // --- Vos idées de recettes : ajout, modification, import et export (gardées dans le navigateur) ---
+  // --- Mon carnet de recettes : ajout, modification, import et export (gardées dans le navigateur) ---
   const NOMS_TYPES = [["plat", "🍽️ Plat"], ["soupe", "🍲 Soupe"], ["entrée", "🥗 Entrée"], ["accompagnement", "🥘 Accompagnement"], ["dessert", "🍰 Dessert"]];
   const NOMS_REGIMES_RECETTE = [["auto", "Détecté automatiquement"], ["vegan", "Vegan"], ["vege", "Végétarien"], ["poisson", "Avec poisson"], ["viande", "Avec viande"]];
   let brouillonPhoto = null; // photo en cours dans le formulaire
@@ -941,6 +941,7 @@ if (typeof document !== "undefined") {
       <span><strong>${esc(r.nom)}</strong> <small>${esc(r.type)} · ${r.temps} min · ${r.ingr.length} ingrédients</small></span>
       <button type="button" class="lien" data-modifier-recette="${r.id}">Modifier</button></li>`).join("");
     $("#exporter").disabled = !liste.length;
+    $("#titre-liste-carnet").hidden = !liste.length;
     if (typeof remplirSuggestions === "function") remplirSuggestions();
   }
 

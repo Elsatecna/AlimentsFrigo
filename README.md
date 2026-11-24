@@ -31,6 +31,6 @@ Tout est enregistré dans le navigateur (localStorage) :
 - la liste des ingrédients déjà saisis (on coche ce qu'on a) ;
 - les réglages : saison choisie, type de plat, temps maximum, tri.
 
-## Vos idées de recettes
+## Mon carnet de recettes
 
 Chacun peut ajouter ses recettes (avec photo facultative), les modifier, les exporter dans un fichier `.json` et importer celui d'un proche. Elles restent dans le navigateur ; pour les ajouter à la base commune, il suffit de copier le contenu d'un fichier exporté dans `recettes.js`.
