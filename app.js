@@ -325,7 +325,7 @@ if (typeof document !== "undefined") {
         <h3><span aria-hidden="true">${r.icone}</span> ${esc(r.nom)}</h3>
         ${r.elements.map(({ nom, i }) => {
           const on = estCoche(nom);
-          return `<label class="ligne-ing${on ? " on" : ""}"><input type="checkbox" data-ing="${i}"${on ? " checked" : ""}> <span>${esc(nom)}</span><button type="button" class="oublier" data-oublier="${i}" aria-label="Retirer ${esc(nom)} de la liste" title="Retirer de la liste">×</button></label>`;
+          return `<label class="ligne-ing${on ? " on" : ""}"><input type="checkbox" data-ing="${i}"${on ? " checked" : ""}> <span title="${esc(nom)}">${esc(nom)}</span><button type="button" class="oublier" data-oublier="${i}" aria-label="Retirer ${esc(nom)} de la liste" title="Retirer de la liste">×</button></label>`;
         }).join("")}
       </div>`).join("") || `<p class="vide">Aucun ingrédient pour l'instant. Ceux que vous ajoutez restent ici, rangés par rayon, pour les prochaines fois.</p>`;
     const n = etat.frigo.length;
@@ -462,12 +462,15 @@ if (typeof document !== "undefined") {
   // --- Options ---
   $("#saison").addEventListener("change", e => { etat.saison = e.target.value; etat.saisonManuelle = true; maj(); });
   $("#type").addEventListener("change", e => { etat.type = e.target.value; maj(); });
-  // Curseur : la dernière position (125) veut dire « peu importe » (pas de limite).
-  const PAS_DE_LIMITE = 125;
-  function libelleTemps(v) {
-    if (v >= PAS_DE_LIMITE) return "peu importe";
-    return v >= 60 ? `${Math.floor(v / 60)} h${v % 60 ? String(v % 60).padStart(2, "0") : ""}` : `${v} min`;
-  }
+  // Curseur « Timing » : de la recette la plus rapide à la plus longue ; tout à droite = pas de limite.
+  const dureeTexte = v => v >= 60 ? `${Math.floor(v / 60)} h${v % 60 ? " " + String(v % 60).padStart(2, "0") : ""}` : `${v} min`;
+  const TEMPS_MIN = Math.min(...RECETTES.map(r => r.temps));
+  const TEMPS_MAX = Math.ceil(Math.max(...RECETTES.map(r => r.temps)) / 5) * 5;
+  const PAS_DE_LIMITE = TEMPS_MAX;
+  const libelleTemps = v => v >= PAS_DE_LIMITE ? "toutes durées" : "jusqu'à " + dureeTexte(v);
+  $("#temps-max").min = TEMPS_MIN; $("#temps-max").max = TEMPS_MAX;
+  $("#temps-min-label").textContent = dureeTexte(TEMPS_MIN);
+  $("#temps-max-label").textContent = dureeTexte(TEMPS_MAX);
   $("#temps-max").addEventListener("input", e => {
     const v = Number(e.target.value);
     etat.tempsMax = v >= PAS_DE_LIMITE ? 0 : v;

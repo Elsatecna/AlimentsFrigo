@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Select &amp; Cook! · Recettes de saison</title>
   <meta name="description" content="Des recettes de saison à partir de ce qu'il y a dans votre frigo, adaptées à l'âge et au régime de chaque convive.">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20261124c">
 </head>
 <body>
   <header class="entete">
@@ -50,9 +50,9 @@
         </label>
       </div>
       <div class="curseur">
-        <label for="temps-max">Temps maximum (préparation + cuisson) : <strong id="temps-max-valeur">peu importe</strong></label>
-        <input type="range" id="temps-max" min="10" max="125" step="5" value="125" aria-describedby="temps-max-valeur">
-        <div class="graduations" aria-hidden="true"><span style="left:0.0%">10 min</span><span style="left:17.39%">30 min</span><span style="left:43.48%">1 h</span><span style="left:69.57%">1 h 30</span><span style="left:100.0%">Peu importe</span></div>
+        <label for="temps-max">Timing : <strong id="temps-max-valeur">toutes durées</strong></label>
+        <input type="range" id="temps-max" min="10" max="210" step="5" value="210" aria-describedby="temps-max-valeur">
+        <div class="graduations" aria-hidden="true"><span id="temps-min-label">10 min</span><span id="temps-max-label">3 h 30</span></div>
       </div>
     </section>
 
@@ -91,8 +91,8 @@
     <p>Fait par Elsa.</p>
   </footer>
 
-  <script src="recettes.js"></script>
-  <script src="categories.js"></script>
-  <script src="app.js"></script>
+  <script src="recettes.js?v=20261124c"></script>
+  <script src="categories.js?v=20261124c"></script>
+  <script src="app.js?v=20261124c"></script>
 </body>
 </html>

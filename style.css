@@ -19,7 +19,7 @@ body {
   line-height: 1.5;
 }
 
-.entete, main, footer { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+.entete, main, footer { max-width: 1240px; margin: 0 auto; padding: 0 20px; }
 .entete { padding-top: 40px; padding-bottom: 8px; }
 .entete h1 { margin: 0 0 6px; font-size: 2.2rem; color: var(--accent); }
 .entete p { margin: 0; color: var(--doux); max-width: 640px; }
@@ -52,7 +52,7 @@ button.secondaire { background: #fff; color: var(--accent); }
 button.lien { background: none; border: none; color: var(--doux); text-decoration: underline; padding: 4px; }
 
 .saisie { display: flex; gap: 8px; }
-.saisie input { flex: 1; }
+.saisie input { flex: 1; min-width: 0; }
 
 .puces { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .puce {
@@ -145,17 +145,17 @@ footer { color: var(--doux); font-size: .8rem; padding-bottom: 40px; border-top:
 .temps { margin: 0; font-size: .9rem; font-weight: 600; }
 .temps span:last-child { font-weight: 400; color: var(--doux); font-size: .8rem; }
 
-/* Rayons en colonnes */
-.colonnes { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin: 12px 0; }
-.colonne { border: 1px solid var(--bord); border-radius: 10px; padding: 10px 10px 6px; background: #fdfcfa; }
-.colonne h3 { margin: 0 0 6px; font-size: .9rem; display: flex; gap: 6px; align-items: center; }
-.ligne-ing { display: flex; align-items: center; gap: 8px; padding: 4px 4px; border-radius: 6px; cursor: pointer; color: var(--texte); font-size: .92rem; }
+/* Rayons en colonnes : étroites et toutes côte à côte sur grand écran */
+.colonnes { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; margin: 12px 0; align-items: start; }
+.colonne { border: 1px solid var(--bord); border-radius: 8px; padding: 6px 4px 4px; background: #fdfcfa; min-width: 0; }
+.colonne h3 { margin: 0 2px 4px; font-size: .78rem; display: flex; gap: 4px; align-items: center; line-height: 1.2; }
+.ligne-ing { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 4px; padding: 2px; border-radius: 5px; cursor: pointer; color: var(--texte); font-size: .82rem; line-height: 1.25; min-width: 0; }
 .ligne-ing:hover { background: #f3efe8; }
 .ligne-ing.on { color: var(--accent); font-weight: 600; }
-.ligne-ing input { margin: 0; accent-color: var(--accent); flex: none; }
-.ligne-ing > span { flex: 1; }
-.ligne-ing small { display: block; font-weight: 400; color: var(--doux); font-size: .75rem; }
-.ligne-ing .oublier { background: none; border: none; color: var(--doux); padding: 0 4px; font-size: 1rem; line-height: 1; opacity: .5; }
+.ligne-ing input { margin: 0; width: 14px; height: 14px; accent-color: var(--accent); flex: none; }
+.ligne-ing > span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ligne-ing small { display: block; font-weight: 400; color: var(--doux); font-size: .7rem; }
+.ligne-ing .oublier { flex: none; background: none; border: none; color: var(--doux); padding: 0 2px; font-size: .95rem; line-height: 1; opacity: .45; }
 .ligne-ing:hover .oublier { opacity: 1; }
 .ligne-ing .oublier:hover { color: var(--alerte); }
 
@@ -182,13 +182,10 @@ button.principal { font-size: 1.05rem; font-weight: 600; padding: 12px 28px; bor
 
 /* Curseur du temps maximum */
 .curseur { margin-top: 16px; }
-.curseur label { color: var(--texte); font-size: .9rem; }
+.curseur label { color: var(--texte); font-size: .95rem; font-weight: 600; flex-direction: row; gap: 6px; }
 .curseur strong { color: var(--accent); }
 .curseur input[type="range"] { width: 100%; margin: 10px 0 2px; accent-color: var(--accent); cursor: pointer; }
-.graduations { position: relative; height: 1.2em; margin: 0 8px; font-size: .75rem; color: var(--doux); }
-.graduations span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
-.graduations span:first-child { transform: none; }
-.graduations span:last-child { transform: translateX(-100%); }
+.graduations { display: flex; justify-content: space-between; font-size: .75rem; color: var(--doux); }
 
 /* En-tête des résultats avec le tri */
 .entete-resultats { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
