@@ -468,7 +468,7 @@ if (typeof document !== "undefined") {
     ["vegetarien", "Végétarien", "Ni viande ni poisson"],
     ["vegetalien", "Végétalien (vegan)", "Aucun produit animal"],
     ["pescetarien", "Pescétarien", "Pas de viande, poisson autorisé"],
-    ["endometriose", "Endométriose", "Anti-inflammatoire : sans viande rouge, charcuterie, alcool ni sucre ajouté"],
+    ["endometriose", "Anti-inflammatoire", "Sans viande rouge, charcuterie, alcool ni sucre ajouté"],
     ["lowcarb", "Low carb", "Sans féculents (pâtes, riz, pain, pommes de terre, légumineuses) ni sucre"],
     ["microbiote", "Microbiote", "Riche en fibres végétales, sans charcuterie ni sucre ajouté"],
   ];
